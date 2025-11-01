@@ -34,11 +34,14 @@ export default function CustomCategoryScreen() {
   const category = currentProject?.[sectionKey]?.find(c => c.id === categoryId);
 
   useEffect(() => {
-    if (currentProject && category !== undefined) {
-      console.log('Custom category loaded:', sectionKey, categoryId, 'Notes:', category?.notes?.length);
+    console.log('Custom category effect - currentProject:', !!currentProject, 'section:', sectionKey, 'categoryId:', categoryId);
+    if (currentProject) {
+      console.log('Custom category loaded:', sectionKey, categoryId, 'Category found:', !!category, 'Notes:', category?.notes?.length || 0);
       setIsLoading(false);
+    } else {
+      console.log('No current project, keeping loading state');
     }
-  }, [currentProject, category]);
+  }, [currentProject, sectionKey, categoryId]);
 
   const getSectionTitle = () => {
     switch (section) {
@@ -137,7 +140,7 @@ export default function CustomCategoryScreen() {
         </View>
         <View style={styles.loadingContainer}>
           <Text style={[styles.loadingText, { color: theme.colors.text, fontSize: baseFontSize }]}>
-            No project selected. Please go back and select a project.
+            {!currentProject ? 'No project selected. Please go back and select a project.' : 'Category not found. Please go back and try again.'}
           </Text>
         </View>
       </View>

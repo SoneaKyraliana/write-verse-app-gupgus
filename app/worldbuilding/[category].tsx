@@ -46,13 +46,16 @@ export default function WorldbuildingScreen() {
   const categoryData = currentProject?.worldbuilding?.[categoryKey];
   const categoryInfo = WORLDBUILDING_CATEGORIES[categoryKey];
 
-  // Set loading to false once we have the data
+  // Set loading to false once we have the project loaded
   useEffect(() => {
-    if (currentProject && categoryData !== undefined) {
-      console.log('Worldbuilding category loaded:', categoryKey, 'Notes:', categoryData?.length);
+    console.log('Worldbuilding effect - currentProject:', !!currentProject, 'categoryKey:', categoryKey);
+    if (currentProject) {
+      console.log('Worldbuilding category loaded:', categoryKey, 'Notes:', categoryData?.length || 0);
       setIsLoading(false);
+    } else {
+      console.log('No current project, keeping loading state');
     }
-  }, [currentProject, categoryData]);
+  }, [currentProject, categoryKey]);
 
   const handleAddNote = () => {
     const noteId = addWorldbuildingNote(categoryKey);
@@ -108,7 +111,7 @@ export default function WorldbuildingScreen() {
     );
   }
 
-  if (!currentProject || !categoryData) {
+  if (!currentProject) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
