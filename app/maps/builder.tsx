@@ -1,5 +1,5 @@
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -17,7 +17,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useProjects, WorldbuildingWithMaps } from '@/contexts/ProjectContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path, Circle, Rect, Text as SvgText, G, Polygon, Ellipse, Line } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Text as SvgText, G, Polygon, Ellipse, Line, Defs } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAP_SIZE = SCREEN_WIDTH - 40;
@@ -52,25 +52,153 @@ const BRUSH_COLORS: Record<BrushType, string> = {
   swamp: '#4A5D23',
 };
 
-const MARKER_ICONS: Record<MarkerType, { icon: string; color: string }> = {
-  house: { icon: 'house.fill', color: '#8B4513' },
-  castle: { icon: 'building.2.fill', color: '#696969' },
-  town: { icon: 'building.2.crop.circle.fill', color: '#A0522D' },
-  windmill: { icon: 'wind', color: '#8B7355' },
-  smith: { icon: 'hammer.fill', color: '#CD853F' },
-  'wooden-bridge': { icon: 'arrow.left.arrow.right', color: '#8B4513' },
-  'stone-bridge': { icon: 'arrow.left.arrow.right', color: '#696969' },
-  mountain: { icon: 'mountain.2.fill', color: '#4A4A4A' },
-  'small-mountain': { icon: 'mountain.2', color: '#6B6B6B' },
-  lake: { icon: 'drop.fill', color: '#4A90E2' },
-  river: { icon: 'water.waves', color: '#5DADE2' },
-  'mountain-range': { icon: 'mountain.2.fill', color: '#2F4F4F' },
-  crevice: { icon: 'line.diagonal', color: '#1C1C1C' },
-  forest: { icon: 'tree.fill', color: '#228B22' },
-  tree: { icon: 'tree', color: '#32CD32' },
-  rock: { icon: 'circle.fill', color: '#808080' },
-  road: { icon: 'road.lanes', color: '#A9A9A9' },
-  tower: { icon: 'antenna.radiowaves.left.and.right', color: '#696969' },
+// Fine ink marker icon component
+const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) => {
+  const inkColor = '#2C1810';
+  const scale = 0.8;
+  
+  switch (type) {
+    case 'house':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M0,-12 L-10,0 L-8,0 L-8,10 L8,10 L8,0 L10,0 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="-3" y="2" width="6" height="8" fill="none" stroke={inkColor} strokeWidth="1" />
+        </G>
+      );
+    case 'castle':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Rect x="-12" y="-8" width="24" height="18" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="-14" y="-12" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="-4" y="-12" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="6" y="-12" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M-5,10 L-5,2 L5,2 L5,10" fill="none" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'town':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Rect x="-10" y="-6" width="8" height="12" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="2" y="-4" width="8" height="10" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="-4" y="-10" width="8" height="16" fill="none" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'windmill':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-4,10 L-2,-8 L2,-8 L4,10 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="0" y1="-8" x2="0" y2="-14" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M0,-14 L-8,-10 M0,-14 L8,-10 M0,-14 L-6,-18 M0,-14 L6,-18" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'smith':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Rect x="-8" y="-6" width="16" height="14" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M-6,-2 L-2,-6 L2,-6 L6,-2" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Circle cx="0" cy="2" r="3" fill="none" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'wooden-bridge':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-12,0 L12,0" stroke={inkColor} strokeWidth="2" />
+          <Line x1="-10" y1="-4" x2="-10" y2="4" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-5" y1="-4" x2="-5" y2="4" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="0" y1="-4" x2="0" y2="4" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="5" y1="-4" x2="5" y2="4" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="10" y1="-4" x2="10" y2="4" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'stone-bridge':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-12,4 Q-12,-4 -6,-6 Q0,-8 6,-6 Q12,-4 12,4" fill="none" stroke={inkColor} strokeWidth="2" />
+          <Path d="M-8,4 L-8,-2 M0,4 L0,-4 M8,4 L8,-2" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'mountain':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-12,8 L-4,-8 L0,-4 L4,-10 L12,8 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M-4,-8 L-6,-2 M4,-10 L2,-4" stroke={inkColor} strokeWidth="1" />
+        </G>
+      );
+    case 'small-mountain':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale * 0.7})`}>
+          <Path d="M-10,6 L0,-8 L10,6 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M0,-8 L-2,-2" stroke={inkColor} strokeWidth="1" />
+        </G>
+      );
+    case 'lake':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Ellipse cx="0" cy="0" rx="12" ry="8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M-6,-2 Q-4,-4 -2,-2 Q0,0 2,-2 Q4,-4 6,-2" stroke={inkColor} strokeWidth="1" opacity="0.6" />
+        </G>
+      );
+    case 'river':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-12,-8 Q-8,-4 -4,-6 Q0,-8 4,-4 Q8,-2 12,0" fill="none" stroke={inkColor} strokeWidth="2" />
+          <Path d="M-12,-4 Q-8,0 -4,-2 Q0,-4 4,0 Q8,2 12,4" fill="none" stroke={inkColor} strokeWidth="2" />
+        </G>
+      );
+    case 'mountain-range':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-14,8 L-8,-6 L-4,-2 L0,-8 L4,-4 L8,-10 L14,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'crevice':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-10,-8 L-8,8 M-6,-8 L-4,8 M-2,-8 L0,8 M2,-8 L4,8 M6,-8 L8,8" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'forest':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-8,8 L-8,2 L-10,-2 L-8,-2 L-8,-6 L-6,-2 L-4,-2 L-6,2 L-6,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M0,8 L0,0 L-2,-4 L0,-4 L0,-8 L2,-4 L4,-4 L2,0 L2,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M6,8 L6,2 L4,-2 L6,-2 L6,-6 L8,-2 L10,-2 L8,2 L8,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+        </G>
+      );
+    case 'tree':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M0,8 L0,0 L-3,-4 L0,-4 L0,-8 L3,-4 L6,-4 L3,0 L3,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-1" y1="8" x2="1" y2="8" stroke={inkColor} strokeWidth="2" />
+        </G>
+      );
+    case 'rock':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-8,4 L-6,-4 L-2,-6 L4,-4 L8,2 L4,6 L-4,6 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M-4,0 L2,-2 M0,4 L4,2" stroke={inkColor} strokeWidth="1" />
+        </G>
+      );
+    case 'road':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Path d="M-12,-4 L12,-4 M-12,4 L12,4" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-8" y1="0" x2="-4" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="2,2" />
+          <Line x1="0" y1="0" x2="4" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="2,2" />
+          <Line x1="8" y1="0" x2="12" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="2,2" />
+        </G>
+      );
+    case 'tower':
+      return (
+        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
+          <Rect x="-4" y="-10" width="8" height="20" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="-6" y="-14" width="12" height="4" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="-2" y="-4" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1" />
+        </G>
+      );
+    default:
+      return <Circle cx={x} cy={y} r="8" fill="none" stroke={inkColor} strokeWidth="1.5" />;
+  }
 };
 
 export default function MapBuilderScreen() {
@@ -98,14 +226,16 @@ export default function MapBuilderScreen() {
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [markerName, setMarkerName] = useState('');
   const [mode, setMode] = useState<'draw' | 'marker'>('draw');
+  const [isLoaded, setIsLoaded] = useState(false);
 
   const baseFontSize = getFontSizeValue();
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  React.useEffect(() => {
-    if (mapId && currentProject) {
+  // Load map data once on mount
+  useEffect(() => {
+    if (mapId && currentProject && !isLoaded) {
       let map;
       
-      // Determine where to get the map from based on source
       if (source === 'worldbuilding' && category) {
         map = getWorldbuildingMap(category as keyof WorldbuildingWithMaps, mapId as string);
       } else if (source === 'custom' && section && categoryId) {
@@ -123,14 +253,21 @@ export default function MapBuilderScreen() {
         setPaths(map.paths || []);
         setMarkers(map.markers || []);
       }
+      setIsLoaded(true);
     }
-  }, [mapId, currentProject, source, category, section, categoryId]);
+  }, [mapId, currentProject, source, category, section, categoryId, isLoaded]);
 
-  React.useEffect(() => {
-    if (mapId && paths.length >= 0 && markers.length >= 0) {
-      console.log('Saving map data - paths:', paths.length, 'markers:', markers.length);
+  // Debounced save - only save after user stops drawing for 500ms
+  useEffect(() => {
+    if (!isLoaded || !mapId) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    saveTimeoutRef.current = setTimeout(() => {
+      console.log('Auto-saving map data - paths:', paths.length, 'markers:', markers.length);
       
-      // Save to the correct location based on source
       if (source === 'worldbuilding' && category) {
         updateWorldbuildingMapData(
           category as keyof WorldbuildingWithMaps,
@@ -149,8 +286,14 @@ export default function MapBuilderScreen() {
       } else {
         updateMapData(mapId as string, paths, markers);
       }
-    }
-  }, [paths, markers]);
+    }, 500);
+
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, [paths, markers, isLoaded]);
 
   const handleTouchStart = (event: any) => {
     const { locationX, locationY } = event.nativeEvent;
@@ -164,7 +307,7 @@ export default function MapBuilderScreen() {
         name: '',
       };
       console.log('Adding marker at:', locationX, locationY);
-      setMarkers([...markers, newMarker]);
+      setMarkers(prev => [...prev, newMarker]);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else if (mode === 'draw') {
       console.log('Starting draw at:', locationX, locationY);
@@ -188,8 +331,8 @@ export default function MapBuilderScreen() {
         path: currentPath,
         color: BRUSH_COLORS[selectedBrush],
       };
-      console.log('Completed path:', newPath);
-      setPaths([...paths, newPath]);
+      console.log('Completed path, adding to paths array');
+      setPaths(prev => [...prev, newPath]);
       setCurrentPath('');
       setIsDrawing(false);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -207,7 +350,7 @@ export default function MapBuilderScreen() {
 
   const handleSaveMarkerName = () => {
     if (selectedMarkerId) {
-      setMarkers(markers.map(m => 
+      setMarkers(prev => prev.map(m => 
         m.id === selectedMarkerId ? { ...m, name: markerName } : m
       ));
       setShowNameModal(false);
@@ -219,7 +362,7 @@ export default function MapBuilderScreen() {
 
   const handleDeleteMarker = () => {
     if (selectedMarkerId) {
-      setMarkers(markers.filter(m => m.id !== selectedMarkerId));
+      setMarkers(prev => prev.filter(m => m.id !== selectedMarkerId));
       setShowNameModal(false);
       setSelectedMarkerId(null);
       setMarkerName('');
@@ -250,10 +393,10 @@ export default function MapBuilderScreen() {
 
   const handleUndo = () => {
     if (mode === 'draw' && paths.length > 0) {
-      setPaths(paths.slice(0, -1));
+      setPaths(prev => prev.slice(0, -1));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else if (mode === 'marker' && markers.length > 0) {
-      setMarkers(markers.slice(0, -1));
+      setMarkers(prev => prev.slice(0, -1));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
@@ -353,25 +496,19 @@ export default function MapBuilderScreen() {
               />
             )}
             
-            {/* Render markers */}
+            {/* Render markers with fine ink icons */}
             {markers.map((marker) => (
-              <G key={marker.id}>
-                <Circle
-                  cx={marker.x}
-                  cy={marker.y}
-                  r={16}
-                  fill={MARKER_ICONS[marker.type].color}
-                  opacity={0.8}
-                  onPress={() => handleMarkerPress(marker.id)}
-                />
+              <G key={marker.id} onPress={() => handleMarkerPress(marker.id)}>
+                <MarkerIcon type={marker.type} x={marker.x} y={marker.y} />
                 {marker.name && (
                   <SvgText
                     x={marker.x}
-                    y={marker.y + 30}
-                    fontSize={10}
-                    fill={theme.colors.text}
+                    y={marker.y + 25}
+                    fontSize={11}
+                    fill="#2C1810"
                     textAnchor="middle"
                     fontWeight="bold"
+                    fontFamily="serif"
                   >
                     {marker.name}
                   </SvgText>
@@ -416,7 +553,11 @@ export default function MapBuilderScreen() {
       {mode === 'marker' && (
         <View style={[styles.toolbar, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.markerContainer}>
-            {(Object.keys(MARKER_ICONS) as MarkerType[]).map((marker) => (
+            {(Object.keys(BRUSH_COLORS).length > 0 ? [
+              'house', 'castle', 'town', 'windmill', 'smith', 'wooden-bridge',
+              'stone-bridge', 'mountain', 'small-mountain', 'lake', 'river',
+              'mountain-range', 'crevice', 'forest', 'tree', 'rock', 'road', 'tower'
+            ] as MarkerType[] : []).map((marker) => (
               <Pressable
                 key={marker}
                 style={[
@@ -432,12 +573,10 @@ export default function MapBuilderScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
               >
-                <View style={[styles.markerIconPreview, { backgroundColor: MARKER_ICONS[marker].color }]}>
-                  <IconSymbol 
-                    name={MARKER_ICONS[marker].icon as any} 
-                    size={24} 
-                    color="#fff" 
-                  />
+                <View style={styles.markerIconPreview}>
+                  <Svg width={48} height={48} viewBox="-24 -24 48 48">
+                    <MarkerIcon type={marker} x={0} y={0} />
+                  </Svg>
                 </View>
                 <Text style={[styles.markerLabel, { color: theme.colors.text, fontSize: baseFontSize - 4 }]}>
                   {marker.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
@@ -598,16 +737,10 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   markerIconPreview: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 48,
+    height: 48,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
   },
   markerLabel: {
     fontWeight: '500',
