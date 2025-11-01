@@ -14,7 +14,7 @@ import {
 import { useTheme } from '@react-navigation/native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { IconSymbol } from '@/components/IconSymbol';
-import { useProjects } from '@/contexts/ProjectContext';
+import { useProjects, WorldbuildingWithMaps } from '@/contexts/ProjectContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path, Circle, Rect, Text as SvgText, G, Polygon, Ellipse, Line } from 'react-native-svg';
@@ -76,8 +76,16 @@ const MARKER_ICONS: Record<MarkerType, { icon: string; color: string }> = {
 export default function MapBuilderScreen() {
   const theme = useTheme();
   const router = useRouter();
-  const { mapId } = useLocalSearchParams();
-  const { currentProject, getMap, updateMapData } = useProjects();
+  const { mapId, source, category, section, categoryId } = useLocalSearchParams();
+  const { 
+    currentProject, 
+    getMap, 
+    updateMapData,
+    getWorldbuildingMap,
+    updateWorldbuildingMapData,
+    getCustomCategoryMap,
+    updateCustomCategoryMapData
+  } = useProjects();
   const { getFontSizeValue } = useSettings();
 
   const [selectedBrush, setSelectedBrush] = useState<BrushType>('land');
@@ -86,8 +94,6 @@ export default function MapBuilderScreen() {
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');
   const [isDrawing, setIsDrawing] = useState(false);
-  const [showBrushMenu, setShowBrushMenu] = useState(false);
-  const [showMarkerMenu, setShowMarkerMenu] = useState(false);
   const [showNameModal, setShowNameModal] = useState(false);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [markerName, setMarkerName] = useState('');
@@ -97,23 +103,59 @@ export default function MapBuilderScreen() {
 
   React.useEffect(() => {
     if (mapId && currentProject) {
-      const map = getMap(mapId as string);
+      let map;
+      
+      // Determine where to get the map from based on source
+      if (source === 'worldbuilding' && category) {
+        map = getWorldbuildingMap(category as keyof WorldbuildingWithMaps, mapId as string);
+      } else if (source === 'custom' && section && categoryId) {
+        map = getCustomCategoryMap(
+          section as 'characters' | 'settings' | 'miscellaneous',
+          categoryId as string,
+          mapId as string
+        );
+      } else {
+        map = getMap(mapId as string);
+      }
+      
       if (map) {
+        console.log('Loaded map with paths:', map.paths?.length || 0, 'markers:', map.markers?.length || 0);
         setPaths(map.paths || []);
         setMarkers(map.markers || []);
       }
     }
-  }, [mapId, currentProject]);
+  }, [mapId, currentProject, source, category, section, categoryId]);
 
   React.useEffect(() => {
-    if (mapId) {
-      updateMapData(mapId as string, paths, markers);
+    if (mapId && paths.length >= 0 && markers.length >= 0) {
+      console.log('Saving map data - paths:', paths.length, 'markers:', markers.length);
+      
+      // Save to the correct location based on source
+      if (source === 'worldbuilding' && category) {
+        updateWorldbuildingMapData(
+          category as keyof WorldbuildingWithMaps,
+          mapId as string,
+          paths,
+          markers
+        );
+      } else if (source === 'custom' && section && categoryId) {
+        updateCustomCategoryMapData(
+          section as 'characters' | 'settings' | 'miscellaneous',
+          categoryId as string,
+          mapId as string,
+          paths,
+          markers
+        );
+      } else {
+        updateMapData(mapId as string, paths, markers);
+      }
     }
   }, [paths, markers]);
 
   const handleTouchStart = (event: any) => {
+    const { locationX, locationY } = event.nativeEvent;
+    
     if (mode === 'marker' && selectedMarker) {
-      const { locationX, locationY } = event.nativeEvent;
       const newMarker: MapMarker = {
         id: Date.now().toString(),
         type: selectedMarker,
@@ -121,10 +163,11 @@ export default function MapBuilderScreen() {
         y: locationY,
         name: '',
       };
+      console.log('Adding marker at:', locationX, locationY);
       setMarkers([...markers, newMarker]);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     } else if (mode === 'draw') {
-      const { locationX, locationY } = event.nativeEvent;
+      console.log('Starting draw at:', locationX, locationY);
       setIsDrawing(true);
       setCurrentPath(`M ${locationX} ${locationY}`);
     }
@@ -145,6 +188,7 @@ export default function MapBuilderScreen() {
         path: currentPath,
         color: BRUSH_COLORS[selectedBrush],
       };
+      console.log('Completed path:', newPath);
       setPaths([...paths, newPath]);
       setCurrentPath('');
       setIsDrawing(false);
@@ -195,6 +239,8 @@ export default function MapBuilderScreen() {
           onPress: () => {
             setPaths([]);
             setMarkers([]);
+            setCurrentPath('');
+            setIsDrawing(false);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           },
         },
@@ -282,6 +328,7 @@ export default function MapBuilderScreen() {
           onResponderRelease={handleTouchEnd}
         >
           <Svg width={MAP_SIZE} height={MAP_SIZE}>
+            {/* Render saved paths */}
             {paths.map((path) => (
               <Path
                 key={path.id}
@@ -293,7 +340,9 @@ export default function MapBuilderScreen() {
                 fill="none"
               />
             ))}
-            {currentPath && (
+            
+            {/* Render current drawing path */}
+            {currentPath && isDrawing && (
               <Path
                 d={currentPath}
                 stroke={BRUSH_COLORS[selectedBrush]}
@@ -303,6 +352,8 @@ export default function MapBuilderScreen() {
                 fill="none"
               />
             )}
+            
+            {/* Render markers */}
             {markers.map((marker) => (
               <G key={marker.id}>
                 <Circle
@@ -381,11 +432,13 @@ export default function MapBuilderScreen() {
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
               >
-                <IconSymbol 
-                  name={MARKER_ICONS[marker].icon as any} 
-                  size={20} 
-                  color={MARKER_ICONS[marker].color} 
-                />
+                <View style={[styles.markerIconPreview, { backgroundColor: MARKER_ICONS[marker].color }]}>
+                  <IconSymbol 
+                    name={MARKER_ICONS[marker].icon as any} 
+                    size={24} 
+                    color="#fff" 
+                  />
+                </View>
                 <Text style={[styles.markerLabel, { color: theme.colors.text, fontSize: baseFontSize - 4 }]}>
                   {marker.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
                 </Text>
@@ -541,8 +594,20 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     justifyContent: 'center',
     alignItems: 'center',
-    minWidth: 90,
-    gap: 4,
+    minWidth: 100,
+    gap: 6,
+  },
+  markerIconPreview: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   markerLabel: {
     fontWeight: '500',

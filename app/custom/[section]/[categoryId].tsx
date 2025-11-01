@@ -20,30 +20,42 @@ export default function CustomCategoryScreen() {
   const theme = useTheme();
   const router = useRouter();
   const { section, categoryId } = useLocalSearchParams();
-  const {
-    currentProject,
-    addCustomCategory,
-    deleteCustomCategory,
-    addCustomNote,
+  const { 
+    currentProject, 
+    addCustomNote, 
     deleteCustomNote,
+    addCustomCategoryMap,
+    deleteCustomCategoryMap
   } = useProjects();
   const { getFontSizeValue } = useSettings();
-  const [showAddCategory, setShowAddCategory] = useState(false);
-  const [categoryName, setCategoryName] = useState('');
+
+  const [showMapNameInput, setShowMapNameInput] = useState(false);
+  const [newMapName, setNewMapName] = useState('');
 
   const baseFontSize = getFontSizeValue();
+
   const sectionKey = section as 'characters' | 'settings' | 'miscellaneous';
+  const category = currentProject?.[sectionKey]?.find(c => c.id === categoryId);
 
   const getSectionTitle = () => {
-    return sectionKey.charAt(0).toUpperCase() + sectionKey.slice(1);
+    switch (section) {
+      case 'characters':
+        return 'Characters';
+      case 'settings':
+        return 'Settings';
+      case 'miscellaneous':
+        return 'Miscellaneous';
+      default:
+        return '';
+    }
   };
 
   const getSectionIcon = () => {
-    switch (sectionKey) {
+    switch (section) {
       case 'characters':
-        return 'person.2.fill';
+        return 'person.fill';
       case 'settings':
-        return 'map.fill';
+        return 'location.fill';
       case 'miscellaneous':
         return 'folder.fill';
       default:
@@ -51,167 +63,25 @@ export default function CustomCategoryScreen() {
     }
   };
 
-  if (!currentProject) {
-    return null;
-  }
-
-  if (categoryId === 'menu') {
-    const categories = currentProject[sectionKey];
-
-    const handleAddCategory = () => {
-      if (categoryName.trim()) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-        addCustomCategory(sectionKey, categoryName.trim());
-        setCategoryName('');
-        setShowAddCategory(false);
-      }
-    };
-
-    const handleDeleteCategory = (id: string, name: string) => {
-      Alert.alert(
-        'Delete Category',
-        `Are you sure you want to delete "${name}" and all its notes?`,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: () => {
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-              deleteCustomCategory(sectionKey, id);
-            },
-          },
-        ]
-      );
-    };
-
-    return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
-          </Pressable>
-          <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 8 }]}>
-            {getSectionTitle()}
-          </Text>
-          <View style={{ width: 40 }} />
-        </View>
-
-        <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-          {categories.length === 0 && !showAddCategory && (
-            <View style={styles.emptyState}>
-              <IconSymbol name={getSectionIcon() as any} size={64} color={theme.dark ? '#666' : '#ccc'} />
-              <Text style={[styles.emptyText, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize }]}>
-                No categories yet. Create your first category to start adding notes.
-              </Text>
-            </View>
-          )}
-
-          {categories.map((category) => (
-            <Pressable
-              key={category.id}
-              style={[styles.categoryCard, { backgroundColor: theme.colors.card }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push(`/custom/${section}/${category.id}` as any);
-              }}
-              onLongPress={() => handleDeleteCategory(category.id, category.name)}
-            >
-              <View style={[styles.categoryIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-                <IconSymbol name={getSectionIcon() as any} size={28} color={theme.colors.primary} />
-              </View>
-              <View style={styles.categoryInfo}>
-                <Text style={[styles.categoryTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
-                  {category.name}
-                </Text>
-                <Text style={[styles.categoryCount, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize - 2 }]}>
-                  {category.notes.length} {category.notes.length === 1 ? 'note' : 'notes'}
-                </Text>
-              </View>
-              <IconSymbol name="chevron.right" size={20} color={theme.dark ? '#666' : '#ccc'} />
-            </Pressable>
-          ))}
-
-          {showAddCategory ? (
-            <View style={[styles.addCategoryForm, { backgroundColor: theme.colors.card }]}>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    color: theme.colors.text,
-                    borderColor: theme.colors.border,
-                    fontSize: baseFontSize,
-                  },
-                ]}
-                placeholder="Category name"
-                placeholderTextColor={theme.dark ? '#666' : '#999'}
-                value={categoryName}
-                onChangeText={setCategoryName}
-                autoFocus
-                onSubmitEditing={handleAddCategory}
-              />
-              <View style={styles.formButtons}>
-                <Pressable
-                  style={[styles.formButton, { backgroundColor: theme.dark ? '#333' : '#f0f0f0' }]}
-                  onPress={() => {
-                    setShowAddCategory(false);
-                    setCategoryName('');
-                  }}
-                >
-                  <Text style={[styles.formButtonText, { color: theme.colors.text, fontSize: baseFontSize }]}>
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.formButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleAddCategory}
-                >
-                  <Text style={[styles.formButtonText, { color: '#fff', fontSize: baseFontSize }]}>
-                    Create
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          ) : (
-            <Pressable
-              style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setShowAddCategory(true);
-              }}
-            >
-              <IconSymbol name="plus" size={24} color="#fff" />
-              <Text style={[styles.addButtonText, { fontSize: baseFontSize }]}>
-                New Category
-              </Text>
-            </Pressable>
-          )}
-        </ScrollView>
-      </View>
-    );
-  }
-
-  const category = currentProject[sectionKey].find((c) => c.id === categoryId);
-
-  if (!category) {
-    return null;
-  }
-
   const handleAddNote = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    if (!categoryId) return;
     const noteId = addCustomNote(sectionKey, categoryId as string);
-    router.push({
-      pathname: '/note-editor',
-      params: {
-        type: 'custom',
-        section: sectionKey,
-        categoryId: categoryId as string,
-        noteId,
-      },
-    });
+    if (noteId) {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      router.push({
+        pathname: '/note-editor',
+        params: {
+          type: 'custom',
+          section: sectionKey,
+          categoryId: categoryId as string,
+          noteId,
+        },
+      });
+    }
   };
 
   const handleDeleteNote = (noteId: string) => {
+    if (!categoryId) return;
     Alert.alert(
       'Delete Note',
       'Are you sure you want to delete this note?',
@@ -221,13 +91,64 @@ export default function CustomCategoryScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             deleteCustomNote(sectionKey, categoryId as string, noteId);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           },
         },
       ]
     );
   };
+
+  const handleAddMap = () => {
+    setShowMapNameInput(true);
+  };
+
+  const handleCreateMap = () => {
+    if (newMapName.trim() && categoryId) {
+      const mapId = addCustomCategoryMap(sectionKey, categoryId as string, newMapName.trim());
+      if (mapId) {
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        setShowMapNameInput(false);
+        setNewMapName('');
+        router.push({
+          pathname: '/maps/builder',
+          params: {
+            mapId,
+            source: 'custom',
+            section: sectionKey,
+            categoryId: categoryId as string,
+          },
+        });
+      }
+    }
+  };
+
+  const handleDeleteMap = (mapId: string, name: string) => {
+    if (!categoryId) return;
+    Alert.alert(
+      'Delete Map',
+      `Are you sure you want to delete "${name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            deleteCustomCategoryMap(sectionKey, categoryId as string, mapId);
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          },
+        },
+      ]
+    );
+  };
+
+  if (!currentProject || !category) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Text style={{ color: theme.colors.text }}>Loading...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -235,53 +156,160 @@ export default function CustomCategoryScreen() {
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
         </Pressable>
-        <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 8 }]}>
-          {category.name}
-        </Text>
-        <Pressable onPress={handleAddNote} style={styles.addButton}>
-          <IconSymbol name="plus" size={24} color={theme.colors.primary} />
-        </Pressable>
+        <View style={styles.headerContent}>
+          <IconSymbol name={getSectionIcon() as any} size={28} color={theme.colors.primary} />
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 4 }]}>
+            {category.name}
+          </Text>
+        </View>
+        <View style={{ width: 40 }} />
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {category.notes.length === 0 ? (
-          <View style={styles.emptyState}>
-            <IconSymbol name="doc.text" size={64} color={theme.dark ? '#666' : '#ccc'} />
-            <Text style={[styles.emptyText, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize }]}>
-              No notes yet. Tap + to create your first note.
+        {/* Maps Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
+              Maps
             </Text>
-          </View>
-        ) : (
-          category.notes.map((note) => (
             <Pressable
-              key={note.id}
-              style={[styles.noteCard, { backgroundColor: theme.colors.card }]}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                router.push({
-                  pathname: '/note-editor',
-                  params: {
-                    type: 'custom',
-                    section: sectionKey,
-                    categoryId: categoryId as string,
-                    noteId: note.id,
-                  },
-                });
-              }}
-              onLongPress={() => handleDeleteNote(note.id)}
+              style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleAddMap}
             >
-              <Text
-                style={[styles.notePreview, { color: theme.colors.text, fontSize: baseFontSize }]}
-                numberOfLines={3}
-              >
-                {note.content || 'Empty note'}
-              </Text>
-              <Text style={[styles.noteDate, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize - 2 }]}>
-                {new Date(note.updatedAt).toLocaleDateString()}
-              </Text>
+              <IconSymbol name="plus" size={20} color="#fff" />
             </Pressable>
-          ))
-        )}
+          </View>
+
+          {showMapNameInput && (
+            <View style={[styles.mapNameInput, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
+              <TextInput
+                style={[styles.input, { color: theme.colors.text, fontSize: baseFontSize }]}
+                placeholder="Enter map name..."
+                placeholderTextColor={theme.dark ? '#666' : '#999'}
+                value={newMapName}
+                onChangeText={setNewMapName}
+                autoFocus
+              />
+              <View style={styles.inputButtons}>
+                <Pressable
+                  style={[styles.inputButton, { backgroundColor: theme.colors.border }]}
+                  onPress={() => {
+                    setShowMapNameInput(false);
+                    setNewMapName('');
+                  }}
+                >
+                  <Text style={[styles.inputButtonText, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.inputButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={handleCreateMap}
+                >
+                  <Text style={[styles.inputButtonText, { color: '#fff', fontSize: baseFontSize - 2 }]}>
+                    Create
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+
+          {category.maps && category.maps.length > 0 ? (
+            category.maps.map((map) => (
+              <Pressable
+                key={map.id}
+                style={[styles.mapItem, { backgroundColor: theme.colors.card }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push({
+                    pathname: '/maps/builder',
+                    params: {
+                      mapId: map.id,
+                      source: 'custom',
+                      section: sectionKey,
+                      categoryId: categoryId as string,
+                    },
+                  });
+                }}
+              >
+                <View style={styles.mapInfo}>
+                  <IconSymbol name="map.fill" size={24} color={theme.colors.primary} />
+                  <Text style={[styles.mapName, { color: theme.colors.text, fontSize: baseFontSize }]}>
+                    {map.name}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => handleDeleteMap(map.id, map.name)}
+                  style={styles.deleteButton}
+                >
+                  <IconSymbol name="trash" size={20} color="#FF3B30" />
+                </Pressable>
+              </Pressable>
+            ))
+          ) : (
+            <Text style={[styles.emptyText, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
+              No maps yet. Tap + to create one.
+            </Text>
+          )}
+        </View>
+
+        {/* Notes Section */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
+              Notes
+            </Text>
+            <Pressable
+              style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleAddNote}
+            >
+              <IconSymbol name="plus" size={20} color="#fff" />
+            </Pressable>
+          </View>
+
+          {category.notes && category.notes.length > 0 ? (
+            category.notes.map((note) => (
+              <Pressable
+                key={note.id}
+                style={[styles.noteItem, { backgroundColor: theme.colors.card }]}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  router.push({
+                    pathname: '/note-editor',
+                    params: {
+                      type: 'custom',
+                      section: sectionKey,
+                      categoryId: categoryId as string,
+                      noteId: note.id,
+                    },
+                  });
+                }}
+              >
+                <View style={styles.noteContent}>
+                  <Text
+                    style={[styles.notePreview, { color: theme.colors.text, fontSize: baseFontSize }]}
+                    numberOfLines={2}
+                  >
+                    {note.content || 'Empty note'}
+                  </Text>
+                  <Text style={[styles.noteDate, { color: theme.colors.text, fontSize: baseFontSize - 4 }]}>
+                    {new Date(note.updatedAt).toLocaleDateString()}
+                  </Text>
+                </View>
+                <Pressable
+                  onPress={() => handleDeleteNote(note.id)}
+                  style={styles.deleteButton}
+                >
+                  <IconSymbol name="trash" size={20} color="#FF3B30" />
+                </Pressable>
+              </Pressable>
+            ))
+          ) : (
+            <Text style={[styles.emptyText, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
+              No notes yet. Tap + to create one.
+            </Text>
+          )}
+        </View>
       </ScrollView>
     </View>
   );
@@ -297,19 +325,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 60,
-    paddingBottom: 20,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   backButton: {
     padding: 8,
   },
-  addButton: {
-    padding: 8,
+  headerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
   },
   title: {
     fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
   },
   content: {
     flex: 1,
@@ -317,101 +347,89 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 20,
   },
-  emptyState: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 60,
+  section: {
+    marginBottom: 32,
   },
-  emptyText: {
-    marginTop: 16,
-    textAlign: 'center',
-    paddingHorizontal: 40,
-  },
-  categoryCard: {
+  sectionHeader: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    marginBottom: 16,
   },
-  categoryIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  categoryInfo: {
-    flex: 1,
-  },
-  categoryTitle: {
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  categoryCount: {
-  },
-  noteCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  notePreview: {
-    marginBottom: 8,
-    lineHeight: 22,
-  },
-  noteDate: {
+  sectionTitle: {
+    fontWeight: 'bold',
   },
   addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mapNameInput: {
     padding: 16,
     borderRadius: 12,
-    marginTop: 8,
-  },
-  addButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  addCategoryForm: {
-    padding: 16,
-    borderRadius: 12,
-    marginTop: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  input: {
     borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
     marginBottom: 12,
   },
-  formButtons: {
-    flexDirection: 'row',
-    gap: 12,
+  input: {
+    marginBottom: 12,
+    paddingVertical: 8,
   },
-  formButton: {
+  inputButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  inputButton: {
     flex: 1,
-    padding: 12,
+    paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
   },
-  formButtonText: {
+  inputButtonText: {
     fontWeight: '600',
+  },
+  mapItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  mapInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  mapName: {
+    fontWeight: '600',
+  },
+  noteItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderRadius: 12,
+    marginBottom: 12,
+  },
+  noteContent: {
+    flex: 1,
+    gap: 4,
+  },
+  notePreview: {
+    opacity: 0.8,
+  },
+  noteDate: {
+    opacity: 0.5,
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  emptyText: {
+    opacity: 0.5,
+    textAlign: 'center',
+    paddingVertical: 20,
   },
 });
