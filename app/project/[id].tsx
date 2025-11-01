@@ -37,6 +37,12 @@ export default function ProjectScreen() {
       route: `/custom/settings/menu`,
     },
     {
+      title: 'Maps',
+      icon: 'map',
+      color: '#FF2D55',
+      route: '/maps',
+    },
+    {
       title: 'Miscellaneous',
       icon: 'folder.fill',
       color: '#AF52DE',

@@ -14,6 +14,29 @@ export interface CustomCategory {
   notes: Note[];
 }
 
+export interface DrawPath {
+  id: string;
+  type: string;
+  path: string;
+  color: string;
+}
+
+export interface MapMarker {
+  id: string;
+  type: string;
+  x: number;
+  y: number;
+  name: string;
+}
+
+export interface Map {
+  id: string;
+  name: string;
+  paths: DrawPath[];
+  markers: MapMarker[];
+  createdAt: number;
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -32,6 +55,7 @@ export interface Project {
   characters: CustomCategory[];
   settings: CustomCategory[];
   miscellaneous: CustomCategory[];
+  maps: Map[];
 }
 
 interface ProjectContextType {
@@ -49,6 +73,11 @@ interface ProjectContextType {
   addCustomNote: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string) => string;
   deleteCustomNote: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, noteId: string) => void;
   searchNotes: (query: string) => SearchResult[];
+  getMaps: () => Map[];
+  getMap: (mapId: string) => Map | undefined;
+  addMap: (name: string) => string;
+  deleteMap: (mapId: string) => void;
+  updateMapData: (mapId: string, paths: DrawPath[], markers: MapMarker[]) => void;
 }
 
 export interface SearchResult {
@@ -80,8 +109,13 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       const data = await AsyncStorage.getItem('projects');
       if (data) {
         const loadedProjects = JSON.parse(data);
-        setProjects(loadedProjects);
-        console.log('Loaded projects:', loadedProjects.length);
+        // Ensure all projects have maps array
+        const migratedProjects = loadedProjects.map((p: Project) => ({
+          ...p,
+          maps: p.maps || [],
+        }));
+        setProjects(migratedProjects);
+        console.log('Loaded projects:', migratedProjects.length);
       }
     } catch (error) {
       console.log('Error loading projects:', error);
@@ -115,6 +149,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       characters: [],
       settings: [],
       miscellaneous: [],
+      maps: [],
     };
     setProjects([...projects, newProject]);
     console.log('Added project:', name);
@@ -393,6 +428,78 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     return preview;
   };
 
+  const getMaps = (): Map[] => {
+    if (!currentProject) return [];
+    return currentProject.maps || [];
+  };
+
+  const getMap = (mapId: string): Map | undefined => {
+    if (!currentProject) return undefined;
+    return currentProject.maps?.find(m => m.id === mapId);
+  };
+
+  const addMap = (name: string): string => {
+    if (!currentProject) return '';
+
+    const newMap: Map = {
+      id: Date.now().toString(),
+      name,
+      paths: [],
+      markers: [],
+      createdAt: Date.now(),
+    };
+
+    const updatedProjects = projects.map(p => {
+      if (p.id === currentProject.id) {
+        return {
+          ...p,
+          maps: [...(p.maps || []), newMap],
+        };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
+    return newMap.id;
+  };
+
+  const deleteMap = (mapId: string) => {
+    if (!currentProject) return;
+
+    const updatedProjects = projects.map(p => {
+      if (p.id === currentProject.id) {
+        return {
+          ...p,
+          maps: (p.maps || []).filter(m => m.id !== mapId),
+        };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
+  };
+
+  const updateMapData = (mapId: string, paths: DrawPath[], markers: MapMarker[]) => {
+    if (!currentProject) return;
+
+    const updatedProjects = projects.map(p => {
+      if (p.id === currentProject.id) {
+        return {
+          ...p,
+          maps: (p.maps || []).map(m =>
+            m.id === mapId ? { ...m, paths, markers } : m
+          ),
+        };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
+  };
+
   return (
     <ProjectContext.Provider
       value={{
@@ -410,6 +517,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         addCustomNote,
         deleteCustomNote,
         searchNotes,
+        getMaps,
+        getMap,
+        addMap,
+        deleteMap,
+        updateMapData,
       }}
     >
       {children}
