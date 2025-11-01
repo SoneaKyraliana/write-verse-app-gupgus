@@ -19,6 +19,12 @@ export default function ProjectScreen() {
 
   const sections = [
     {
+      title: 'Story',
+      icon: 'book.fill',
+      color: '#5856D6',
+      route: '/story/menu',
+    },
+    {
       title: 'Worldbuilding',
       icon: 'globe',
       color: '#007AFF',

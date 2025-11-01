@@ -37,6 +37,12 @@ export interface Map {
   createdAt: number;
 }
 
+export interface Chapter {
+  id: string;
+  name: string;
+  notes: Note[];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -56,6 +62,7 @@ export interface Project {
   settings: CustomCategory[];
   miscellaneous: CustomCategory[];
   maps: Map[];
+  story: Chapter[];
 }
 
 interface ProjectContextType {
@@ -72,6 +79,11 @@ interface ProjectContextType {
   updateCustomNote: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, noteId: string, content: string) => void;
   addCustomNote: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string) => string;
   deleteCustomNote: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, noteId: string) => void;
+  addChapter: (name: string) => void;
+  deleteChapter: (chapterId: string) => void;
+  updateScene: (chapterId: string, sceneId: string, content: string) => void;
+  addScene: (chapterId: string) => string;
+  deleteScene: (chapterId: string, sceneId: string) => void;
   searchNotes: (query: string) => SearchResult[];
   getMaps: () => Map[];
   getMap: (mapId: string) => Map | undefined;
@@ -109,10 +121,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       const data = await AsyncStorage.getItem('projects');
       if (data) {
         const loadedProjects = JSON.parse(data);
-        // Ensure all projects have maps array
+        // Ensure all projects have maps and story arrays
         const migratedProjects = loadedProjects.map((p: Project) => ({
           ...p,
           maps: p.maps || [],
+          story: p.story || [],
         }));
         setProjects(migratedProjects);
         console.log('Loaded projects:', migratedProjects.length);
@@ -150,6 +163,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       settings: [],
       miscellaneous: [],
       maps: [],
+      story: [],
     };
     setProjects([...projects, newProject]);
     console.log('Added project:', name);
@@ -366,6 +380,137 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
   };
 
+  const addChapter = (name: string) => {
+    if (!currentProject) return;
+
+    const newChapter: Chapter = {
+      id: Date.now().toString(),
+      name,
+      notes: [],
+    };
+
+    const updatedProjects = projects.map(p => {
+      if (p.id === currentProject.id) {
+        return {
+          ...p,
+          story: [...(p.story || []), newChapter],
+        };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
+    console.log('Added chapter:', name);
+  };
+
+  const deleteChapter = (chapterId: string) => {
+    if (!currentProject) return;
+
+    const updatedProjects = projects.map(p => {
+      if (p.id === currentProject.id) {
+        return {
+          ...p,
+          story: (p.story || []).filter((c: Chapter) => c.id !== chapterId),
+        };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
+    console.log('Deleted chapter:', chapterId);
+  };
+
+  const updateScene = (chapterId: string, sceneId: string, content: string) => {
+    if (!currentProject) return;
+
+    const updatedProjects = projects.map(p => {
+      if (p.id === currentProject.id) {
+        const chapters = (p.story || []).map((chapter: Chapter) => {
+          if (chapter.id === chapterId) {
+            return {
+              ...chapter,
+              notes: chapter.notes.map(n =>
+                n.id === sceneId ? { ...n, content, updatedAt: Date.now() } : n
+              ),
+            };
+          }
+          return chapter;
+        });
+        return {
+          ...p,
+          story: chapters,
+        };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
+  };
+
+  const addScene = (chapterId: string): string => {
+    if (!currentProject) return '';
+
+    const newScene: Note = {
+      id: Date.now().toString(),
+      content: '',
+      updatedAt: Date.now(),
+    };
+
+    const updatedProjects = projects.map(p => {
+      if (p.id === currentProject.id) {
+        const chapters = (p.story || []).map((chapter: Chapter) => {
+          if (chapter.id === chapterId) {
+            return {
+              ...chapter,
+              notes: [...chapter.notes, newScene],
+            };
+          }
+          return chapter;
+        });
+        return {
+          ...p,
+          story: chapters,
+        };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
+    console.log('Added scene to chapter:', chapterId);
+    return newScene.id;
+  };
+
+  const deleteScene = (chapterId: string, sceneId: string) => {
+    if (!currentProject) return;
+
+    const updatedProjects = projects.map(p => {
+      if (p.id === currentProject.id) {
+        const chapters = (p.story || []).map((chapter: Chapter) => {
+          if (chapter.id === chapterId) {
+            return {
+              ...chapter,
+              notes: chapter.notes.filter(n => n.id !== sceneId),
+            };
+          }
+          return chapter;
+        });
+        return {
+          ...p,
+          story: chapters,
+        };
+      }
+      return p;
+    });
+
+    setProjects(updatedProjects);
+    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
+    console.log('Deleted scene:', sceneId);
+  };
+
   const searchNotes = (query: string): SearchResult[] => {
     if (!query.trim()) return [];
 
@@ -409,6 +554,25 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           });
         });
       });
+
+      // Search story chapters
+      if (project.story) {
+        project.story.forEach(chapter => {
+          chapter.notes.forEach(note => {
+            if (note.content.toLowerCase().includes(lowerQuery)) {
+              results.push({
+                projectId: project.id,
+                projectName: project.name,
+                section: 'Story',
+                category: chapter.name,
+                noteId: note.id,
+                content: note.content,
+                preview: getPreview(note.content, lowerQuery),
+              });
+            }
+          });
+        });
+      }
     });
 
     return results;
@@ -516,6 +680,11 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         updateCustomNote,
         addCustomNote,
         deleteCustomNote,
+        addChapter,
+        deleteChapter,
+        updateScene,
+        addScene,
+        deleteScene,
         searchNotes,
         getMaps,
         getMap,
