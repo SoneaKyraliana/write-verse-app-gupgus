@@ -23,24 +23,10 @@ export const unstable_settings = {
   initialRouteName: "index",
 };
 
-function RootLayoutContent() {
+function RootLayoutNav() {
   const systemColorScheme = useColorScheme();
   const { isDarkMode } = useSettings();
   
-  const [loaded] = useFonts({
-    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
-  });
-
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
-
-  if (!loaded) {
-    return null;
-  }
-
   const colorScheme = isDarkMode ? 'dark' : (systemColorScheme || 'light');
 
   const CustomDefaultTheme: Theme = {
@@ -101,9 +87,23 @@ function RootLayoutContent() {
 }
 
 export default function RootLayout() {
+  const [loaded] = useFonts({
+    SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
+  });
+
+  useEffect(() => {
+    if (loaded) {
+      SplashScreen.hideAsync();
+    }
+  }, [loaded]);
+
+  if (!loaded) {
+    return null;
+  }
+
   return (
     <SettingsProvider>
-      <RootLayoutContent />
+      <RootLayoutNav />
     </SettingsProvider>
   );
 }
