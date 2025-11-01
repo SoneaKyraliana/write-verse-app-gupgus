@@ -32,6 +32,7 @@ interface DrawPath {
   type: BrushType;
   path: string;
   color: string;
+  strokeWidth: number;
 }
 
 interface MapMarker {
@@ -40,6 +41,9 @@ interface MapMarker {
   x: number;
   y: number;
   name: string;
+  nameX?: number;
+  nameY?: number;
+  nameFontSize?: number;
 }
 
 const BRUSH_COLORS: Record<BrushType, string> = {
@@ -78,6 +82,8 @@ const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) 
           <Rect x="4" y="5" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.2" />
           <Line x1="6" y1="5" x2="6" y2="9" stroke={inkColor} strokeWidth="0.8" />
           <Line x1="4" y1="7" x2="8" y2="7" stroke={inkColor} strokeWidth="0.8" />
+          {/* Chimney smoke */}
+          <Path d="M-12,-2 Q-13,-4 -12,-6 Q-11,-8 -12,-10" stroke={lightInk} strokeWidth="0.6" opacity="0.5" />
         </G>
       );
     case 'castle':
@@ -93,6 +99,7 @@ const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) 
           {/* Tower details */}
           <Line x1="-14" y1="-2" x2="14" y2="-2" stroke={lightInk} strokeWidth="1" />
           <Line x1="-14" y1="4" x2="14" y2="4" stroke={lightInk} strokeWidth="1" />
+          <Line x1="-14" y1="10" x2="14" y2="10" stroke={lightInk} strokeWidth="1" />
           {/* Gate */}
           <Path d="M-6,14 L-6,4 Q-6,2 -4,2 L4,2 Q6,2 6,4 L6,14" fill="none" stroke={inkColor} strokeWidth="1.8" />
           {/* Gate details */}
@@ -102,6 +109,11 @@ const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) 
           {/* Windows */}
           <Rect x="-11" y="0" width="3" height="4" fill="none" stroke={inkColor} strokeWidth="1" />
           <Rect x="8" y="0" width="3" height="4" fill="none" stroke={inkColor} strokeWidth="1" />
+          {/* Flags */}
+          <Line x1="-14" y1="-12" x2="-14" y2="-18" stroke={inkColor} strokeWidth="1" />
+          <Path d="M-14,-18 L-10,-16 L-14,-14" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Line x1="2" y1="-12" x2="2" y2="-18" stroke={inkColor} strokeWidth="1" />
+          <Path d="M2,-18 L6,-16 L2,-14" fill="none" stroke={inkColor} strokeWidth="1" />
         </G>
       );
     case 'town':
@@ -112,6 +124,7 @@ const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) 
           <Path d="M-12,-4 L-8,-10 L-4,-4" fill="none" stroke={inkColor} strokeWidth="1.8" />
           <Rect x="-10" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
           <Rect x="-7" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Line x1="-10" y1="-2" x2="-6" y2="-2" stroke={lightInk} strokeWidth="0.8" />
           {/* Center building (tallest) */}
           <Rect x="-5" y="-12" width="10" height="22" fill="none" stroke={inkColor} strokeWidth="1.8" />
           <Path d="M-5,-12 L0,-18 L5,-12" fill="none" stroke={inkColor} strokeWidth="1.8" />
@@ -120,11 +133,14 @@ const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) 
           <Rect x="-3" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
           <Rect x="1" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
           <Rect x="-2" y="6" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          <Line x1="-4" y1="-8" x2="4" y2="-8" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="-4" y1="0" x2="4" y2="0" stroke={lightInk} strokeWidth="0.8" />
           {/* Right building */}
           <Rect x="6" y="-2" width="8" height="12" fill="none" stroke={inkColor} strokeWidth="1.8" />
           <Path d="M6,-2 L10,-8 L14,-2" fill="none" stroke={inkColor} strokeWidth="1.8" />
           <Rect x="8" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
           <Rect x="11" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Line x1="8" y1="0" x2="12" y2="0" stroke={lightInk} strokeWidth="0.8" />
         </G>
       );
     case 'windmill':
@@ -171,6 +187,8 @@ const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) 
           <Line x1="8" y1="2" x2="6" y2="8" stroke={inkColor} strokeWidth="1.5" />
           {/* Forge fire */}
           <Path d="M-8,6 L-7,4 L-6,6 L-5,3 L-4,6" fill="none" stroke="#FF6B35" strokeWidth="1.2" />
+          {/* Smoke */}
+          <Path d="M-6,3 Q-7,0 -6,-2" stroke={lightInk} strokeWidth="0.6" opacity="0.4" />
         </G>
       );
     case 'wooden-bridge':
@@ -367,20 +385,30 @@ const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) 
     case 'road':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Road edges */}
-          <Path d="M-14,-5 L14,-5" stroke={inkColor} strokeWidth="2" />
-          <Path d="M-14,5 L14,5" stroke={inkColor} strokeWidth="2" />
-          {/* Center dashed line */}
-          <Line x1="-12" y1="0" x2="-8" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
-          <Line x1="-6" y1="0" x2="-2" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
-          <Line x1="0" y1="0" x2="4" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
-          <Line x1="6" y1="0" x2="10" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
-          <Line x1="12" y1="0" x2="14" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
-          {/* Road texture */}
-          <Path d="M-10,-3 L-8,-1 M-4,-2 L-2,0" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
-          <Path d="M2,-1 L4,1 M8,-2 L10,0" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
-          <Path d="M-12,2 L-10,4 M-6,1 L-4,3" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
-          <Path d="M0,2 L2,4 M6,1 L8,3" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          {/* Dirt path edges - irregular and natural */}
+          <Path d="M-14,-4 Q-10,-5 -6,-3 Q-2,-4 2,-3 Q6,-5 10,-3 Q12,-4 14,-2" fill="none" stroke={inkColor} strokeWidth="2" />
+          <Path d="M-14,4 Q-10,5 -6,3 Q-2,4 2,3 Q6,5 10,3 Q12,4 14,2" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* Dirt texture - small stones and irregularities */}
+          <Circle cx="-10" cy="-1" r="0.8" fill={inkColor} />
+          <Circle cx="-6" cy="1" r="0.6" fill={inkColor} />
+          <Circle cx="-2" cy="-0.5" r="0.7" fill={inkColor} />
+          <Circle cx="2" cy="1.5" r="0.5" fill={inkColor} />
+          <Circle cx="6" cy="-1" r="0.8" fill={inkColor} />
+          <Circle cx="10" cy="0.5" r="0.6" fill={inkColor} />
+          {/* Footprints and tracks */}
+          <Path d="M-8,-2 L-7,-1 M-7,-1 L-8,0" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          <Path d="M-4,1 L-3,2 M-3,2 L-4,3" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          <Path d="M0,-1 L1,0 M1,0 L0,1" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          <Path d="M4,2 L5,3 M5,3 L4,4" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          <Path d="M8,-1 L9,0 M9,0 L8,1" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          {/* Grass tufts along edges */}
+          <Path d="M-12,-5 L-12,-7 M-11,-5 L-11,-6" stroke={lightInk} strokeWidth="0.6" />
+          <Path d="M-8,4 L-8,6 M-7,4 L-7,5" stroke={lightInk} strokeWidth="0.6" />
+          <Path d="M-4,-4 L-4,-6 M-3,-4 L-3,-5" stroke={lightInk} strokeWidth="0.6" />
+          <Path d="M0,5 L0,7 M1,5 L1,6" stroke={lightInk} strokeWidth="0.6" />
+          <Path d="M4,-4 L4,-6 M5,-4 L5,-5" stroke={lightInk} strokeWidth="0.6" />
+          <Path d="M8,4 L8,6 M9,4 L9,5" stroke={lightInk} strokeWidth="0.6" />
+          <Path d="M12,-5 L12,-7 M13,-5 L13,-6" stroke={lightInk} strokeWidth="0.6" />
         </G>
       );
     case 'tower':
@@ -439,6 +467,9 @@ export default function MapBuilderScreen() {
   const [markerName, setMarkerName] = useState('');
   const [mode, setMode] = useState<'draw' | 'marker'>('draw');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [brushWidth, setBrushWidth] = useState(20);
+  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [isDraggingName, setIsDraggingName] = useState(false);
 
   const baseFontSize = getFontSizeValue();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -542,6 +573,7 @@ export default function MapBuilderScreen() {
         type: selectedBrush,
         path: currentPath,
         color: BRUSH_COLORS[selectedBrush],
+        strokeWidth: brushWidth,
       };
       console.log('Completed path, adding to paths array');
       setPaths(prev => [...prev, newPath]);
@@ -626,6 +658,35 @@ export default function MapBuilderScreen() {
     }
   };
 
+  const handleNameLongPress = (markerId: string) => {
+    setEditingNameId(markerId);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
+
+  const handleNameDrag = (event: any, markerId: string) => {
+    if (editingNameId === markerId) {
+      const { locationX, locationY } = event.nativeEvent;
+      setMarkers(prev => prev.map(m => 
+        m.id === markerId ? { ...m, nameX: locationX, nameY: locationY } : m
+      ));
+    }
+  };
+
+  const handleNameDragEnd = () => {
+    setEditingNameId(null);
+    setIsDraggingName(false);
+  };
+
+  const handleNameSizeChange = (markerId: string, delta: number) => {
+    setMarkers(prev => prev.map(m => 
+      m.id === markerId ? { 
+        ...m, 
+        nameFontSize: Math.max(8, Math.min(24, (m.nameFontSize || 12) + delta))
+      } : m
+    ));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
@@ -643,7 +704,7 @@ export default function MapBuilderScreen() {
       <View style={[styles.infoBar, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
         <IconSymbol name="info.circle" size={16} color={theme.colors.primary} />
         <Text style={[styles.infoText, { color: theme.colors.text, fontSize: baseFontSize - 3 }]}>
-          {mode === 'marker' ? 'Tap map to place marker, then tap marker to name it' : 'Draw on the map to create terrain'}
+          {mode === 'marker' ? 'Tap map to place marker, then tap marker to name it. Long press names to move/resize' : 'Draw on the map to create terrain. Adjust brush width with slider'}
         </Text>
       </View>
 
@@ -694,6 +755,45 @@ export default function MapBuilderScreen() {
         </Pressable>
       </View>
 
+      {mode === 'draw' && (
+        <View style={[styles.brushWidthControl, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+          <Text style={[styles.brushWidthLabel, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
+            Brush Width: {brushWidth}
+          </Text>
+          <View style={styles.brushWidthSlider}>
+            <Pressable
+              onPress={() => {
+                setBrushWidth(Math.max(5, brushWidth - 5));
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={[styles.brushWidthButton, { backgroundColor: theme.colors.primary }]}
+            >
+              <IconSymbol name="minus" size={16} color="#fff" />
+            </Pressable>
+            <View style={styles.brushWidthBar}>
+              <View 
+                style={[
+                  styles.brushWidthIndicator, 
+                  { 
+                    width: `${(brushWidth / 50) * 100}%`,
+                    backgroundColor: theme.colors.primary 
+                  }
+                ]} 
+              />
+            </View>
+            <Pressable
+              onPress={() => {
+                setBrushWidth(Math.min(50, brushWidth + 5));
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+              style={[styles.brushWidthButton, { backgroundColor: theme.colors.primary }]}
+            >
+              <IconSymbol name="plus" size={16} color="#fff" />
+            </Pressable>
+          </View>
+        </View>
+      )}
+
       <View style={styles.mapContainer}>
         <View
           style={[styles.canvas, { backgroundColor: '#F5E6D3' }]}
@@ -709,7 +809,7 @@ export default function MapBuilderScreen() {
                 key={path.id}
                 d={path.path}
                 stroke={path.color}
-                strokeWidth={20}
+                strokeWidth={path.strokeWidth || 20}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
@@ -721,7 +821,7 @@ export default function MapBuilderScreen() {
               <Path
                 d={currentPath}
                 stroke={BRUSH_COLORS[selectedBrush]}
-                strokeWidth={20}
+                strokeWidth={brushWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 fill="none"
@@ -730,20 +830,28 @@ export default function MapBuilderScreen() {
             
             {/* Render markers with fine ink icons */}
             {markers.map((marker) => (
-              <G key={marker.id} onPress={() => handleMarkerPress(marker.id)}>
-                <MarkerIcon type={marker.type} x={marker.x} y={marker.y} />
+              <G key={marker.id}>
+                <G onPress={() => handleMarkerPress(marker.id)}>
+                  <MarkerIcon type={marker.type} x={marker.x} y={marker.y} />
+                </G>
                 {marker.name && (
-                  <SvgText
-                    x={marker.x}
-                    y={marker.y + 28}
-                    fontSize={12}
-                    fill="#1a0f08"
-                    textAnchor="middle"
-                    fontWeight="bold"
-                    fontFamily="serif"
+                  <G
+                    onLongPress={() => handleNameLongPress(marker.id)}
+                    onResponderMove={(e) => handleNameDrag(e, marker.id)}
+                    onResponderRelease={handleNameDragEnd}
                   >
-                    {marker.name}
-                  </SvgText>
+                    <SvgText
+                      x={marker.nameX || marker.x}
+                      y={marker.nameY || (marker.y + 28)}
+                      fontSize={marker.nameFontSize || 12}
+                      fill="#1a0f08"
+                      textAnchor="middle"
+                      fontWeight="bold"
+                      fontFamily="serif"
+                    >
+                      {marker.name}
+                    </SvgText>
+                  </G>
                 )}
               </G>
             ))}
@@ -840,7 +948,7 @@ export default function MapBuilderScreen() {
               Edit Location
             </Text>
             <Text style={[styles.modalSubtitle, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize - 2 }]}>
-              Add a name to this marker or delete it
+              Add a name to this marker or delete it. Long press the name on the map to move or resize it.
             </Text>
             <TextInput
               style={[styles.modalInput, { 
@@ -854,6 +962,27 @@ export default function MapBuilderScreen() {
               onChangeText={setMarkerName}
               autoFocus
             />
+            {selectedMarkerId && markers.find(m => m.id === selectedMarkerId)?.name && (
+              <View style={styles.nameSizeControls}>
+                <Text style={[styles.nameSizeLabel, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
+                  Name Size:
+                </Text>
+                <View style={styles.nameSizeButtons}>
+                  <Pressable
+                    onPress={() => handleNameSizeChange(selectedMarkerId, -2)}
+                    style={[styles.nameSizeButton, { backgroundColor: theme.colors.border }]}
+                  >
+                    <IconSymbol name="textformat.size.smaller" size={18} color={theme.colors.text} />
+                  </Pressable>
+                  <Pressable
+                    onPress={() => handleNameSizeChange(selectedMarkerId, 2)}
+                    style={[styles.nameSizeButton, { backgroundColor: theme.colors.border }]}
+                  >
+                    <IconSymbol name="textformat.size.larger" size={18} color={theme.colors.text} />
+                  </Pressable>
+                </View>
+              </View>
+            )}
             <View style={styles.modalButtons}>
               <Pressable
                 style={[styles.modalButton, styles.deleteButton, { backgroundColor: '#FF3B30' }]}
@@ -929,6 +1058,38 @@ const styles = StyleSheet.create({
   },
   modeText: {
     fontWeight: '600',
+  },
+  brushWidthControl: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  brushWidthLabel: {
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  brushWidthSlider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  brushWidthButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  brushWidthBar: {
+    flex: 1,
+    height: 8,
+    backgroundColor: '#E0E0E0',
+    borderRadius: 4,
+    overflow: 'hidden',
+  },
+  brushWidthIndicator: {
+    height: '100%',
+    borderRadius: 4,
   },
   mapContainer: {
     flex: 1,
@@ -1029,7 +1190,25 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    marginBottom: 20,
+    marginBottom: 16,
+  },
+  nameSizeControls: {
+    marginBottom: 16,
+  },
+  nameSizeLabel: {
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  nameSizeButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  nameSizeButton: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   modalButtons: {
     flexDirection: 'row',
