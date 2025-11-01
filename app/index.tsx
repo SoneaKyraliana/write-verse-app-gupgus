@@ -63,7 +63,7 @@ export default function HomeScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
         <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 12 }]}>
-          WriteVerse
+          Wriven
         </Text>
         <View style={styles.headerButtons}>
           <Pressable
