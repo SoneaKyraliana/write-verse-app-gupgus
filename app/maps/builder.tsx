@@ -1,5 +1,4 @@
 
-import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,23 +10,19 @@ import {
   Modal,
   Dimensions,
 } from 'react-native';
-import { useTheme } from '@react-navigation/native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import { IconSymbol } from '@/components/IconSymbol';
-import { useProjects, WorldbuildingWithMaps } from '@/contexts/ProjectContext';
-import { useSettings } from '@/contexts/SettingsContext';
-import * as Haptics from 'expo-haptics';
+import { useProjects } from '@/contexts/ProjectContext';
+import { useTheme } from '@react-navigation/native';
 import Svg, { Path, Circle, Rect, Text as SvgText, G, Polygon, Ellipse, Line, Defs, ClipPath } from 'react-native-svg';
-import { GestureHandlerRootView, PinchGestureHandler, PanGestureHandler } from 'react-native-gesture-handler';
+import React, { useState, useRef, useEffect } from 'react';
 import Animated, { useSharedValue, useAnimatedStyle, useAnimatedGestureHandler, withSpring } from 'react-native-reanimated';
+import { useSettings } from '@/contexts/SettingsContext';
+import { GestureHandlerRootView, PinchGestureHandler, PanGestureHandler } from 'react-native-gesture-handler';
+import * as Haptics from 'expo-haptics';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const MAP_SIZE = SCREEN_WIDTH - 40;
-
-type BrushType = 'land' | 'water' | 'forest' | 'mountain' | 'desert' | 'snow' | 'swamp';
-type MarkerType = 'house' | 'castle' | 'town' | 'windmill' | 'smith' | 'wooden-bridge' | 
-  'stone-bridge' | 'mountain' | 'small-mountain' | 'lake' | 'river' | 'mountain-range' | 
-  'crevice' | 'forest' | 'tree' | 'rock' | 'road' | 'tower';
+type BrushType = 'grass' | 'water' | 'mountain' | 'forest' | 'desert' | 'snow';
+type MarkerType = 'city' | 'village' | 'castle' | 'dungeon' | 'landmark' | 'road';
 
 interface DrawPath {
   id: string;
@@ -48,551 +43,191 @@ interface MapMarker {
   nameFontSize?: number;
 }
 
+const MAP_SIZE = 800;
+
 const BRUSH_COLORS: Record<BrushType, string> = {
-  land: '#8B7355',
-  water: '#4A90E2',
-  forest: '#2D5016',
-  mountain: '#6B6B6B',
-  desert: '#EDC9AF',
-  snow: '#F0F8FF',
-  swamp: '#4A5D23',
+  grass: '#7CB342',
+  water: '#42A5F5',
+  mountain: '#8D6E63',
+  forest: '#2E7D32',
+  desert: '#FFB74D',
+  snow: '#E3F2FD',
 };
 
-// Enhanced fine ink marker icon component with more elaborate details
-const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) => {
-  const inkColor = '#1a0f08';
-  const lightInk = '#3d2817';
-  const scale = 0.9;
-  
+function MarkerIcon({ type, x, y }: { type: MarkerType; x: number; y: number }) {
+  const size = 40;
+  const halfSize = size / 2;
+
   switch (type) {
-    case 'house':
+    case 'city':
       return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Roof */}
-          <Path d="M0,-14 L-12,0 L-10,0 L-10,2 L10,2 L10,0 L12,0 Z" fill="none" stroke={inkColor} strokeWidth="1.8" strokeLinejoin="miter" />
-          {/* Roof details */}
-          <Line x1="-8" y1="-7" x2="-8" y2="0" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="-4" y1="-10.5" x2="-4" y2="0" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="4" y1="-10.5" x2="4" y2="0" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="8" y1="-7" x2="8" y2="0" stroke={lightInk} strokeWidth="0.8" />
-          {/* Walls */}
-          <Rect x="-10" y="2" width="20" height="12" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          {/* Door */}
-          <Rect x="-3" y="6" width="6" height="8" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Circle cx="-1" cy="10" r="0.5" fill={inkColor} />
-          {/* Window */}
-          <Rect x="4" y="5" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.2" />
-          <Line x1="6" y1="5" x2="6" y2="9" stroke={inkColor} strokeWidth="0.8" />
-          <Line x1="4" y1="7" x2="8" y2="7" stroke={inkColor} strokeWidth="0.8" />
-          {/* Chimney smoke */}
-          <Path d="M-12,-2 Q-13,-4 -12,-6 Q-11,-8 -12,-10" stroke={lightInk} strokeWidth="0.6" opacity="0.5" />
+        <G x={x - halfSize} y={y - halfSize}>
+          <Rect x="5" y="15" width="10" height="20" fill="#424242" stroke="#212121" strokeWidth="1" />
+          <Rect x="18" y="10" width="12" height="25" fill="#616161" stroke="#212121" strokeWidth="1" />
+          <Rect x="25" y="5" width="10" height="30" fill="#757575" stroke="#212121" strokeWidth="1" />
+          <Rect x="7" y="18" width="2" height="3" fill="#FFD54F" />
+          <Rect x="11" y="18" width="2" height="3" fill="#FFD54F" />
+          <Rect x="7" y="24" width="2" height="3" fill="#FFD54F" />
+          <Rect x="11" y="24" width="2" height="3" fill="#FFD54F" />
+          <Rect x="20" y="13" width="2" height="3" fill="#FFD54F" />
+          <Rect x="24" y="13" width="2" height="3" fill="#FFD54F" />
+          <Rect x="20" y="19" width="2" height="3" fill="#FFD54F" />
+          <Rect x="24" y="19" width="2" height="3" fill="#FFD54F" />
+          <Rect x="27" y="8" width="2" height="3" fill="#FFD54F" />
+          <Rect x="31" y="8" width="2" height="3" fill="#FFD54F" />
+          <Rect x="27" y="14" width="2" height="3" fill="#FFD54F" />
+          <Rect x="31" y="14" width="2" height="3" fill="#FFD54F" />
+        </G>
+      );
+    case 'village':
+      return (
+        <G x={x - halfSize} y={y - halfSize}>
+          <Polygon points="20,8 10,18 30,18" fill="#8D6E63" stroke="#5D4037" strokeWidth="1.5" />
+          <Rect x="14" y="18" width="12" height="14" fill="#A1887F" stroke="#5D4037" strokeWidth="1" />
+          <Rect x="18" y="24" width="4" height="8" fill="#6D4C41" />
+          <Rect x="16" y="20" width="3" height="3" fill="#81C784" />
+          <Rect x="21" y="20" width="3" height="3" fill="#81C784" />
         </G>
       );
     case 'castle':
       return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Main walls */}
-          <Rect x="-14" y="-6" width="28" height="20" fill="none" stroke={inkColor} strokeWidth="2" />
-          {/* Battlements */}
-          <Rect x="-16" y="-12" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Rect x="-8" y="-12" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Rect x="0" y="-12" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Rect x="8" y="-12" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          {/* Tower details */}
-          <Line x1="-14" y1="-2" x2="14" y2="-2" stroke={lightInk} strokeWidth="1" />
-          <Line x1="-14" y1="4" x2="14" y2="4" stroke={lightInk} strokeWidth="1" />
-          <Line x1="-14" y1="10" x2="14" y2="10" stroke={lightInk} strokeWidth="1" />
-          {/* Gate */}
-          <Path d="M-6,14 L-6,4 Q-6,2 -4,2 L4,2 Q6,2 6,4 L6,14" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          {/* Gate details */}
-          <Line x1="-4" y1="4" x2="-4" y2="14" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="0" y1="4" x2="0" y2="14" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="4" y1="4" x2="4" y2="14" stroke={lightInk} strokeWidth="0.8" />
-          {/* Windows */}
-          <Rect x="-11" y="0" width="3" height="4" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Rect x="8" y="0" width="3" height="4" fill="none" stroke={inkColor} strokeWidth="1" />
-          {/* Flags */}
-          <Line x1="-14" y1="-12" x2="-14" y2="-18" stroke={inkColor} strokeWidth="1" />
-          <Path d="M-14,-18 L-10,-16 L-14,-14" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Line x1="2" y1="-12" x2="2" y2="-18" stroke={inkColor} strokeWidth="1" />
-          <Path d="M2,-18 L6,-16 L2,-14" fill="none" stroke={inkColor} strokeWidth="1" />
+        <G x={x - halfSize} y={y - halfSize}>
+          <Rect x="8" y="12" width="24" height="20" fill="#78909C" stroke="#37474F" strokeWidth="1.5" />
+          <Rect x="6" y="8" width="6" height="8" fill="#90A4AE" stroke="#37474F" strokeWidth="1" />
+          <Rect x="28" y="8" width="6" height="8" fill="#90A4AE" stroke="#37474F" strokeWidth="1" />
+          <Rect x="6" y="6" width="2" height="3" fill="#37474F" />
+          <Rect x="10" y="6" width="2" height="3" fill="#37474F" />
+          <Rect x="28" y="6" width="2" height="3" fill="#37474F" />
+          <Rect x="32" y="6" width="2" height="3" fill="#37474F" />
+          <Rect x="17" y="22" width="6" height="10" fill="#455A64" />
+          <Rect x="14" y="16" width="3" height="4" fill="#263238" />
+          <Rect x="23" y="16" width="3" height="4" fill="#263238" />
         </G>
       );
-    case 'town':
+    case 'dungeon':
       return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Left building */}
-          <Rect x="-12" y="-4" width="8" height="14" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Path d="M-12,-4 L-8,-10 L-4,-4" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Rect x="-10" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Rect x="-7" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Line x1="-10" y1="-2" x2="-6" y2="-2" stroke={lightInk} strokeWidth="0.8" />
-          {/* Center building (tallest) */}
-          <Rect x="-5" y="-12" width="10" height="22" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Path d="M-5,-12 L0,-18 L5,-12" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Rect x="-3" y="-6" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Rect x="1" y="-6" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Rect x="-3" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Rect x="1" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Rect x="-2" y="6" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.2" />
-          <Line x1="-4" y1="-8" x2="4" y2="-8" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="-4" y1="0" x2="4" y2="0" stroke={lightInk} strokeWidth="0.8" />
-          {/* Right building */}
-          <Rect x="6" y="-2" width="8" height="12" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Path d="M6,-2 L10,-8 L14,-2" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Rect x="8" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Rect x="11" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
-          <Line x1="8" y1="0" x2="12" y2="0" stroke={lightInk} strokeWidth="0.8" />
+        <G x={x - halfSize} y={y - halfSize}>
+          <Ellipse cx="20" cy="20" rx="14" ry="10" fill="#424242" stroke="#212121" strokeWidth="1.5" />
+          <Rect x="14" y="15" width="12" height="15" fill="#212121" stroke="#000" strokeWidth="1" />
+          <Path d="M 17 20 Q 20 23 23 20" fill="none" stroke="#616161" strokeWidth="2" />
+          <Circle cx="18" cy="18" r="1.5" fill="#B71C1C" />
+          <Circle cx="22" cy="18" r="1.5" fill="#B71C1C" />
         </G>
       );
-    case 'windmill':
+    case 'landmark':
       return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Tower base */}
-          <Path d="M-5,12 L-3,-10 L3,-10 L5,12 Z" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          {/* Tower details */}
-          <Line x1="-4" y1="0" x2="4" y2="0" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="-4.5" y1="6" x2="4.5" y2="6" stroke={lightInk} strokeWidth="0.8" />
-          {/* Door */}
-          <Rect x="-2" y="8" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.2" />
-          {/* Windmill blades center */}
-          <Circle cx="0" cy="-10" r="2" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          {/* Blade 1 */}
-          <Path d="M0,-10 L-2,-12 L-10,-14 L-12,-16 L-10,-18 L-2,-16 L0,-14" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-2" y1="-12" x2="-10" y2="-18" stroke={lightInk} strokeWidth="0.8" />
-          {/* Blade 2 */}
-          <Path d="M0,-10 L2,-12 L10,-14 L12,-16 L10,-18 L2,-16 L0,-14" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="2" y1="-12" x2="10" y2="-18" stroke={lightInk} strokeWidth="0.8" />
-          {/* Blade 3 */}
-          <Path d="M0,-10 L-2,-8 L-8,-4 L-10,-2 L-8,0 L-2,-4 L0,-6" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-2" y1="-8" x2="-8" y2="0" stroke={lightInk} strokeWidth="0.8" />
-          {/* Blade 4 */}
-          <Path d="M0,-10 L2,-8 L8,-4 L10,-2 L8,0 L2,-4 L0,-6" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="2" y1="-8" x2="8" y2="0" stroke={lightInk} strokeWidth="0.8" />
-        </G>
-      );
-    case 'smith':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Building */}
-          <Rect x="-10" y="-6" width="20" height="16" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          {/* Roof */}
-          <Path d="M-12,-6 L0,-12 L12,-6" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Line x1="-6" y1="-9" x2="-6" y2="-6" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="0" y1="-12" x2="0" y2="-6" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="6" y1="-9" x2="6" y2="-6" stroke={lightInk} strokeWidth="0.8" />
-          {/* Anvil */}
-          <Path d="M-6,2 L-4,-2 L4,-2 L6,2 L6,4 L-6,4 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="-3" y="4" width="6" height="2" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          {/* Hammer */}
-          <Circle cx="8" cy="0" r="2" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="8" y1="2" x2="6" y2="8" stroke={inkColor} strokeWidth="1.5" />
-          {/* Forge fire */}
-          <Path d="M-8,6 L-7,4 L-6,6 L-5,3 L-4,6" fill="none" stroke="#FF6B35" strokeWidth="1.2" />
-          {/* Smoke */}
-          <Path d="M-6,3 Q-7,0 -6,-2" stroke={lightInk} strokeWidth="0.6" opacity="0.4" />
-        </G>
-      );
-    case 'wooden-bridge':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Bridge deck */}
-          <Path d="M-14,0 L14,0" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M-14,2 L14,2" stroke={inkColor} strokeWidth="1.5" />
-          {/* Planks */}
-          <Line x1="-12" y1="-4" x2="-12" y2="6" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-8" y1="-4" x2="-8" y2="6" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-4" y1="-4" x2="-4" y2="6" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="0" y1="-4" x2="0" y2="6" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="4" y1="-4" x2="4" y2="6" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="8" y1="-4" x2="8" y2="6" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="12" y1="-4" x2="12" y2="6" stroke={inkColor} strokeWidth="1.5" />
-          {/* Support beams */}
-          <Line x1="-10" y1="-4" x2="-10" y2="2" stroke={lightInk} strokeWidth="1" />
-          <Line x1="-6" y1="-4" x2="-6" y2="2" stroke={lightInk} strokeWidth="1" />
-          <Line x1="-2" y1="-4" x2="-2" y2="2" stroke={lightInk} strokeWidth="1" />
-          <Line x1="2" y1="-4" x2="2" y2="2" stroke={lightInk} strokeWidth="1" />
-          <Line x1="6" y1="-4" x2="6" y2="2" stroke={lightInk} strokeWidth="1" />
-          <Line x1="10" y1="-4" x2="10" y2="2" stroke={lightInk} strokeWidth="1" />
-        </G>
-      );
-    case 'stone-bridge':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Main arch */}
-          <Path d="M-14,6 Q-14,-2 -8,-5 Q0,-8 8,-5 Q14,-2 14,6" fill="none" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M-14,8 Q-14,0 -8,-3 Q0,-6 8,-3 Q14,0 14,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          {/* Stone blocks */}
-          <Line x1="-10" y1="6" x2="-10" y2="-2" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-6" y1="6" x2="-6" y2="-4" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-2" y1="6" x2="-2" y2="-5" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="2" y1="6" x2="2" y2="-5" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="6" y1="6" x2="6" y2="-4" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="10" y1="6" x2="10" y2="-2" stroke={inkColor} strokeWidth="1.5" />
-          {/* Horizontal mortar lines */}
-          <Path d="M-12,2 Q-8,0 -4,0 Q0,-1 4,0 Q8,0 12,2" stroke={lightInk} strokeWidth="1" />
-          <Path d="M-10,-1 Q-6,-2 -2,-2 Q0,-3 2,-2 Q6,-2 10,-1" stroke={lightInk} strokeWidth="1" />
-        </G>
-      );
-    case 'mountain':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Main peaks */}
-          <Path d="M-14,10 L-6,-10 L-2,-6 L2,-12 L6,-8 L14,10 Z" fill="none" stroke={inkColor} strokeWidth="2" />
-          {/* Snow caps */}
-          <Path d="M-6,-10 L-7,-6 L-5,-6 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M2,-12 L1,-8 L3,-8 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          {/* Rock details */}
-          <Path d="M-6,-10 L-8,-4 M-6,-10 L-4,-4" stroke={lightInk} strokeWidth="1" />
-          <Path d="M2,-12 L0,-6 M2,-12 L4,-6" stroke={lightInk} strokeWidth="1" />
-          <Path d="M-10,4 L-8,0 M-4,2 L-2,-2" stroke={lightInk} strokeWidth="1" />
-          <Path d="M4,2 L6,-2 M8,4 L10,0" stroke={lightInk} strokeWidth="1" />
-        </G>
-      );
-    case 'small-mountain':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale * 0.75})`}>
-          {/* Single peak */}
-          <Path d="M-12,8 L0,-10 L12,8 Z" fill="none" stroke={inkColor} strokeWidth="2" />
-          {/* Snow cap */}
-          <Path d="M0,-10 L-2,-6 L2,-6 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          {/* Rock details */}
-          <Path d="M0,-10 L-3,-4 M0,-10 L3,-4" stroke={lightInk} strokeWidth="1" />
-          <Path d="M-6,2 L-4,-2 M6,2 L4,-2" stroke={lightInk} strokeWidth="1" />
-        </G>
-      );
-    case 'lake':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Lake outline */}
-          <Ellipse cx="0" cy="0" rx="14" ry="9" fill="none" stroke={inkColor} strokeWidth="2" />
-          {/* Water ripples */}
-          <Path d="M-8,-3 Q-6,-5 -4,-3 Q-2,-1 0,-3 Q2,-5 4,-3 Q6,-1 8,-3" stroke={inkColor} strokeWidth="1.2" opacity="0.6" />
-          <Path d="M-6,0 Q-4,-2 -2,0 Q0,2 2,0 Q4,-2 6,0" stroke={inkColor} strokeWidth="1.2" opacity="0.6" />
-          <Path d="M-8,3 Q-6,1 -4,3 Q-2,5 0,3 Q2,1 4,3 Q6,5 8,3" stroke={inkColor} strokeWidth="1.2" opacity="0.6" />
-          {/* Shore details */}
-          <Path d="M-12,-4 Q-10,-3 -9,-4" stroke={lightInk} strokeWidth="1" />
-          <Path d="M9,-4 Q10,-3 12,-4" stroke={lightInk} strokeWidth="1" />
-        </G>
-      );
-    case 'river':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* River banks */}
-          <Path d="M-14,-10 Q-10,-6 -6,-8 Q-2,-10 2,-6 Q6,-4 10,-6 Q12,-7 14,-4" fill="none" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M-14,-6 Q-10,-2 -6,-4 Q-2,-6 2,-2 Q6,0 10,-2 Q12,-3 14,0" fill="none" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M-14,6 Q-10,2 -6,4 Q-2,6 2,2 Q6,0 10,2 Q12,3 14,6" fill="none" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M-14,10 Q-10,6 -6,8 Q-2,10 2,6 Q6,4 10,6 Q12,7 14,10" fill="none" stroke={inkColor} strokeWidth="2.5" />
-          {/* Water flow lines */}
-          <Path d="M-12,-8 Q-8,-4 -4,-6 Q0,-8 4,-4 Q8,-2 12,-4" stroke={lightInk} strokeWidth="1" opacity="0.5" />
-          <Path d="M-12,0 Q-8,4 -4,2 Q0,0 4,4 Q8,6 12,4" stroke={lightInk} strokeWidth="1" opacity="0.5" />
-          <Path d="M-12,8 Q-8,4 -4,6 Q0,8 4,4 Q8,2 12,4" stroke={lightInk} strokeWidth="1" opacity="0.5" />
-        </G>
-      );
-    case 'mountain-range':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Multiple peaks */}
-          <Path d="M-16,10 L-12,-4 L-10,-2 L-8,-8 L-6,-4 L-4,-10 L-2,-6 L0,-12 L2,-8 L4,-10 L6,-6 L8,-8 L10,-4 L12,-6 L16,10" fill="none" stroke={inkColor} strokeWidth="2" />
-          {/* Snow caps */}
-          <Path d="M-8,-8 L-9,-5 L-7,-5 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
-          <Path d="M-4,-10 L-5,-7 L-3,-7 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
-          <Path d="M0,-12 L-1,-9 L1,-9 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
-          <Path d="M4,-10 L3,-7 L5,-7 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
-          <Path d="M8,-8 L7,-5 L9,-5 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
-          {/* Rock details */}
-          <Path d="M-12,-4 L-13,0 M-8,-8 L-9,-3" stroke={lightInk} strokeWidth="0.8" />
-          <Path d="M-4,-10 L-5,-5 M0,-12 L-1,-7" stroke={lightInk} strokeWidth="0.8" />
-          <Path d="M4,-10 L3,-5 M8,-8 L7,-3" stroke={lightInk} strokeWidth="0.8" />
-        </G>
-      );
-    case 'crevice':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Crevice edges */}
-          <Path d="M-12,-10 L-10,10" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M-8,-10 L-6,10" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M-4,-10 L-2,10" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M0,-10 L2,10" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M4,-10 L6,10" stroke={inkColor} strokeWidth="2.5" />
-          <Path d="M8,-10 L10,10" stroke={inkColor} strokeWidth="2.5" />
-          {/* Depth lines */}
-          <Line x1="-11" y1="-5" x2="-9" y2="-5" stroke={lightInk} strokeWidth="1.2" />
-          <Line x1="-11" y1="0" x2="-9" y2="0" stroke={lightInk} strokeWidth="1.2" />
-          <Line x1="-11" y1="5" x2="-9" y2="5" stroke={lightInk} strokeWidth="1.2" />
-          <Line x1="-7" y1="-2" x2="-5" y2="-2" stroke={lightInk} strokeWidth="1.2" />
-          <Line x1="-7" y1="3" x2="-5" y2="3" stroke={lightInk} strokeWidth="1.2" />
-          <Line x1="-3" y1="0" x2="-1" y2="0" stroke={lightInk} strokeWidth="1.2" />
-          <Line x1="1" y1="-3" x2="3" y2="-3" stroke={lightInk} strokeWidth="1.2" />
-          <Line x1="5" y1="2" x2="7" y2="2" stroke={lightInk} strokeWidth="1.2" />
-          <Line x1="9" y1="-1" x2="11" y2="-1" stroke={lightInk} strokeWidth="1.2" />
-        </G>
-      );
-    case 'forest':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Left tree */}
-          <Line x1="-10" y1="10" x2="-10" y2="2" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M-10,2 L-14,-2 L-12,-2 L-14,-6 L-12,-6 L-10,-10 L-8,-6 L-6,-6 L-8,-2 L-6,-2 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M-12,-4 L-10,-10 L-8,-4" stroke={lightInk} strokeWidth="0.8" />
-          {/* Center tree */}
-          <Line x1="0" y1="10" x2="0" y2="0" stroke={inkColor} strokeWidth="1.8" />
-          <Path d="M0,0 L-5,-5 L-3,-5 L-5,-9 L-3,-9 L0,-14 L3,-9 L5,-9 L3,-5 L5,-5 Z" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Path d="M-3,-7 L0,-14 L3,-7" stroke={lightInk} strokeWidth="1" />
-          {/* Right tree */}
-          <Line x1="10" y1="10" x2="10" y2="2" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M10,2 L6,-2 L8,-2 L6,-6 L8,-6 L10,-10 L12,-6 L14,-6 L12,-2 L14,-2 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M8,-4 L10,-10 L12,-4" stroke={lightInk} strokeWidth="0.8" />
-          {/* Ground bushes */}
-          <Path d="M-14,10 Q-12,8 -10,10" stroke={inkColor} strokeWidth="1.2" />
-          <Path d="M-6,10 Q-4,8 -2,10" stroke={inkColor} strokeWidth="1.2" />
-          <Path d="M2,10 Q4,8 6,10" stroke={inkColor} strokeWidth="1.2" />
-          <Path d="M10,10 Q12,8 14,10" stroke={inkColor} strokeWidth="1.2" />
-        </G>
-      );
-    case 'tree':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Trunk */}
-          <Path d="M-2,10 L-2,0 L2,0 L2,10" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Line x1="-1" y1="10" x2="1" y2="10" stroke={inkColor} strokeWidth="2.5" />
-          {/* Trunk texture */}
-          <Line x1="-1" y1="3" x2="1" y2="3" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="-1" y1="6" x2="1" y2="6" stroke={lightInk} strokeWidth="0.8" />
-          {/* Foliage layers */}
-          <Path d="M0,0 L-6,-4 L-4,-4 L-6,-8 L-4,-8 L0,-12 L4,-8 L6,-8 L4,-4 L6,-4 Z" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Path d="M-4,-6 L0,-12 L4,-6" stroke={lightInk} strokeWidth="1" />
-          <Path d="M-5,-2 L0,-6 L5,-2" stroke={lightInk} strokeWidth="1" />
-          {/* Roots */}
-          <Path d="M-2,10 Q-4,11 -5,12" stroke={inkColor} strokeWidth="1.2" />
-          <Path d="M2,10 Q4,11 5,12" stroke={inkColor} strokeWidth="1.2" />
-        </G>
-      );
-    case 'rock':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Main rock shape */}
-          <Path d="M-10,6 L-8,-6 L-4,-8 L2,-7 L6,-4 L10,4 L6,8 L-2,8 L-6,7 Z" fill="none" stroke={inkColor} strokeWidth="2" />
-          {/* Rock texture and cracks */}
-          <Path d="M-6,-2 L-2,-4 L2,-2 L4,2" stroke={lightInk} strokeWidth="1.2" />
-          <Path d="M-4,2 L0,0 L4,3 L6,6" stroke={lightInk} strokeWidth="1.2" />
-          <Path d="M-8,-2 L-6,2 L-4,4" stroke={lightInk} strokeWidth="1" />
-          <Path d="M2,-6 L4,-2 L6,0" stroke={lightInk} strokeWidth="1" />
-          {/* Shading lines */}
-          <Line x1="-7" y1="0" x2="-5" y2="2" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="-3" y1="5" x2="-1" y2="7" stroke={lightInk} strokeWidth="0.8" />
-          <Line x1="3" y1="4" x2="5" y2="6" stroke={lightInk} strokeWidth="0.8" />
+        <G x={x - halfSize} y={y - halfSize}>
+          <Polygon points="20,5 15,15 25,15" fill="#FFB74D" stroke="#E65100" strokeWidth="1.5" />
+          <Rect x="18" y="15" width="4" height="17" fill="#8D6E63" stroke="#5D4037" strokeWidth="1" />
+          <Circle cx="20" cy="8" r="3" fill="#FDD835" stroke="#F57F17" strokeWidth="1" />
         </G>
       );
     case 'road':
       return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Dirt path edges - irregular and natural */}
-          <Path d="M-14,-4 Q-10,-5 -6,-3 Q-2,-4 2,-3 Q6,-5 10,-3 Q12,-4 14,-2" fill="none" stroke={inkColor} strokeWidth="2" />
-          <Path d="M-14,4 Q-10,5 -6,3 Q-2,4 2,3 Q6,5 10,3 Q12,4 14,2" fill="none" stroke={inkColor} strokeWidth="2" />
-          {/* Dirt texture - small stones and irregularities */}
-          <Circle cx="-10" cy="-1" r="0.8" fill={inkColor} />
-          <Circle cx="-6" cy="1" r="0.6" fill={inkColor} />
-          <Circle cx="-2" cy="-0.5" r="0.7" fill={inkColor} />
-          <Circle cx="2" cy="1.5" r="0.5" fill={inkColor} />
-          <Circle cx="6" cy="-1" r="0.8" fill={inkColor} />
-          <Circle cx="10" cy="0.5" r="0.6" fill={inkColor} />
-          {/* Footprints and tracks */}
-          <Path d="M-8,-2 L-7,-1 M-7,-1 L-8,0" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
-          <Path d="M-4,1 L-3,2 M-3,2 L-4,3" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
-          <Path d="M0,-1 L1,0 M1,0 L0,1" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
-          <Path d="M4,2 L5,3 M5,3 L4,4" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
-          <Path d="M8,-1 L9,0 M9,0 L8,1" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
-          {/* Grass tufts along edges */}
-          <Path d="M-12,-5 L-12,-7 M-11,-5 L-11,-6" stroke={lightInk} strokeWidth="0.6" />
-          <Path d="M-8,4 L-8,6 M-7,4 L-7,5" stroke={lightInk} strokeWidth="0.6" />
-          <Path d="M-4,-4 L-4,-6 M-3,-4 L-3,-5" stroke={lightInk} strokeWidth="0.6" />
-          <Path d="M0,5 L0,7 M1,5 L1,6" stroke={lightInk} strokeWidth="0.6" />
-          <Path d="M4,-4 L4,-6 M5,-4 L5,-5" stroke={lightInk} strokeWidth="0.6" />
-          <Path d="M8,4 L8,6 M9,4 L9,5" stroke={lightInk} strokeWidth="0.6" />
-          <Path d="M12,-5 L12,-7 M13,-5 L13,-6" stroke={lightInk} strokeWidth="0.6" />
-        </G>
-      );
-    case 'tower':
-      return (
-        <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          {/* Tower base */}
-          <Rect x="-5" y="-8" width="10" height="22" fill="none" stroke={inkColor} strokeWidth="2" />
-          {/* Battlements */}
-          <Rect x="-7" y="-14" width="14" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
-          <Rect x="-7" y="-14" width="3" height="3" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="-1.5" y="-14" width="3" height="3" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="4" y="-14" width="3" height="3" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          {/* Tower details */}
-          <Line x1="-5" y1="-2" x2="5" y2="-2" stroke={lightInk} strokeWidth="1" />
-          <Line x1="-5" y1="4" x2="5" y2="4" stroke={lightInk} strokeWidth="1" />
-          <Line x1="-5" y1="10" x2="5" y2="10" stroke={lightInk} strokeWidth="1" />
-          {/* Windows */}
-          <Rect x="-2" y="-5" width="4" height="5" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="0" y1="-5" x2="0" y2="0" stroke={inkColor} strokeWidth="1" />
-          <Line x1="-2" y1="-2.5" x2="2" y2="-2.5" stroke={inkColor} strokeWidth="1" />
-          <Rect x="-2" y="1" width="4" height="5" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="0" y1="1" x2="0" y2="6" stroke={inkColor} strokeWidth="1" />
-          <Line x1="-2" y1="3.5" x2="2" y2="3.5" stroke={inkColor} strokeWidth="1" />
-          {/* Door */}
-          <Path d="M-2,14 L-2,8 Q-2,7 0,7 Q2,7 2,8 L2,14" fill="none" stroke={inkColor} strokeWidth="1.5" />
+        <G x={x - halfSize} y={y - halfSize}>
+          <Path
+            d="M 5 20 Q 15 15 25 20 Q 30 22 35 20"
+            fill="none"
+            stroke="#8D6E63"
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+          <Path
+            d="M 5 20 Q 15 15 25 20 Q 30 22 35 20"
+            fill="none"
+            stroke="#A1887F"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeDasharray="3,2"
+          />
         </G>
       );
     default:
-      return <Circle cx={x} cy={y} r="8" fill="none" stroke={inkColor} strokeWidth="1.8" />;
+      return null;
   }
-};
-
-const AnimatedSvg = Animated.createAnimatedComponent(Svg);
+}
 
 export default function MapBuilderScreen() {
-  const theme = useTheme();
   const router = useRouter();
-  const { mapId, source, category, section, categoryId } = useLocalSearchParams();
-  const { 
-    currentProject, 
-    getMap, 
-    updateMapData,
-    getWorldbuildingMap,
-    updateWorldbuildingMapData,
-    getCustomCategoryMap,
-    updateCustomCategoryMapData
-  } = useProjects();
+  const { mapId, source } = useLocalSearchParams();
+  const { currentProject, getMap, updateMapData } = useProjects();
+  const theme = useTheme();
   const { getFontSizeValue } = useSettings();
 
-  const [selectedBrush, setSelectedBrush] = useState<BrushType>('land');
+  const [selectedBrush, setSelectedBrush] = useState<BrushType>('grass');
   const [selectedMarker, setSelectedMarker] = useState<MarkerType | null>(null);
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [markers, setMarkers] = useState<MapMarker[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');
   const [isDrawing, setIsDrawing] = useState(false);
-  const [showNameModal, setShowNameModal] = useState(false);
+  const [showMarkerNameInput, setShowMarkerNameInput] = useState(false);
   const [selectedMarkerId, setSelectedMarkerId] = useState<string | null>(null);
   const [markerName, setMarkerName] = useState('');
-  const [mode, setMode] = useState<'draw' | 'marker'>('draw');
   const [isLoaded, setIsLoaded] = useState(false);
-  const [brushWidth, setBrushWidth] = useState(20);
-  const [editingNameId, setEditingNameId] = useState<string | null>(null);
+  const [strokeWidth, setStrokeWidth] = useState(20);
   const [isDraggingName, setIsDraggingName] = useState(false);
+  const [draggedNameId, setDraggedNameId] = useState<string | null>(null);
 
-  // Zoom and pan state
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
   const translateY = useSharedValue(0);
-  const savedScale = useSharedValue(1);
-  const savedTranslateX = useSharedValue(0);
-  const savedTranslateY = useSharedValue(0);
+  const focalX = useSharedValue(0);
+  const focalY = useSharedValue(0);
 
-  const baseFontSize = getFontSizeValue();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Load map data once on mount
+  const baseFontSize = getFontSizeValue();
+
   useEffect(() => {
-    if (mapId && currentProject && !isLoaded) {
-      let map;
-      
-      if (source === 'worldbuilding' && category) {
-        map = getWorldbuildingMap(category as keyof WorldbuildingWithMaps, mapId as string);
-      } else if (source === 'custom' && section && categoryId) {
-        map = getCustomCategoryMap(
-          section as 'characters' | 'settings' | 'miscellaneous',
-          categoryId as string,
-          mapId as string
-        );
-      } else {
-        map = getMap(mapId as string);
-      }
-      
+    if (mapId && currentProject) {
+      const map = getMap(mapId as string);
       if (map) {
-        console.log('Loaded map with paths:', map.paths?.length || 0, 'markers:', map.markers?.length || 0);
+        console.log('Loading map:', map.name, 'Paths:', map.paths?.length, 'Markers:', map.markers?.length);
         setPaths(map.paths || []);
         setMarkers(map.markers || []);
-      }
-      setIsLoaded(true);
-    }
-  }, [mapId, currentProject, source, category, section, categoryId, isLoaded]);
-
-  // Debounced save - only save after user stops drawing for 500ms
-  useEffect(() => {
-    if (!isLoaded || !mapId) return;
-
-    if (saveTimeoutRef.current) {
-      clearTimeout(saveTimeoutRef.current);
-    }
-
-    saveTimeoutRef.current = setTimeout(() => {
-      console.log('Auto-saving map data - paths:', paths.length, 'markers:', markers.length);
-      
-      if (source === 'worldbuilding' && category) {
-        updateWorldbuildingMapData(
-          category as keyof WorldbuildingWithMaps,
-          mapId as string,
-          paths,
-          markers
-        );
-      } else if (source === 'custom' && section && categoryId) {
-        updateCustomCategoryMapData(
-          section as 'characters' | 'settings' | 'miscellaneous',
-          categoryId as string,
-          mapId as string,
-          paths,
-          markers
-        );
+        setIsLoaded(true);
       } else {
-        updateMapData(mapId as string, paths, markers);
+        console.log('Map not found:', mapId);
+        setIsLoaded(true);
       }
-    }, 500);
+    }
+  }, [mapId, currentProject]);
 
-    return () => {
+  useEffect(() => {
+    if (isLoaded && mapId) {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
-    };
+      saveTimeoutRef.current = setTimeout(() => {
+        console.log('Saving map data:', paths.length, 'paths,', markers.length, 'markers');
+        updateMapData(mapId as string, paths, markers);
+      }, 500);
+    }
   }, [paths, markers, isLoaded]);
 
-  // Pinch gesture handler
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        { translateX: translateX.value },
+        { translateY: translateY.value },
+        { scale: scale.value },
+      ],
+    };
+  });
+
   const pinchHandler = useAnimatedGestureHandler({
-    onStart: () => {
-      savedScale.value = scale.value;
-    },
     onActive: (event) => {
-      scale.value = Math.max(0.5, Math.min(savedScale.value * event.scale, 3));
-    },
-    onEnd: () => {
-      // Optionally snap back if zoomed out too much
-      if (scale.value < 0.5) {
-        scale.value = withSpring(0.5);
-      }
+      scale.value = Math.max(0.5, Math.min(3, event.scale));
     },
   });
-
-  // Pan gesture handler
-  const panHandler = useAnimatedGestureHandler({
-    onStart: () => {
-      savedTranslateX.value = translateX.value;
-      savedTranslateY.value = translateY.value;
-    },
-    onActive: (event) => {
-      translateX.value = savedTranslateX.value + event.translationX;
-      translateY.value = savedTranslateY.value + event.translationY;
-    },
-  });
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: translateX.value },
-      { translateY: translateY.value },
-      { scale: scale.value },
-    ],
-  }));
 
   const handleZoomIn = () => {
-    scale.value = withSpring(Math.min(scale.value + 0.2, 3));
+    scale.value = withSpring(Math.min(3, scale.value + 0.2));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const handleZoomOut = () => {
-    scale.value = withSpring(Math.max(scale.value - 0.2, 0.5));
+    scale.value = withSpring(Math.max(0.5, scale.value - 0.2));
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
@@ -600,48 +235,57 @@ export default function MapBuilderScreen() {
     scale.value = withSpring(1);
     translateX.value = withSpring(0);
     translateY.value = withSpring(0);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
   const handleTouchStart = (event: any) => {
+    if (isDraggingName) return;
+
     const { locationX, locationY } = event.nativeEvent;
-    
-    if (mode === 'marker' && selectedMarker) {
+    const adjustedX = (locationX - translateX.value) / scale.value;
+    const adjustedY = (locationY - translateY.value) / scale.value;
+
+    if (selectedMarker) {
       const newMarker: MapMarker = {
         id: Date.now().toString(),
         type: selectedMarker,
-        x: locationX,
-        y: locationY,
+        x: adjustedX,
+        y: adjustedY,
         name: '',
+        nameX: adjustedX,
+        nameY: adjustedY + 30,
+        nameFontSize: 14,
       };
-      console.log('Adding marker at:', locationX, locationY);
-      setMarkers(prev => [...prev, newMarker]);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } else if (mode === 'draw') {
-      console.log('Starting draw at:', locationX, locationY);
+      setMarkers([...markers, newMarker]);
+      setSelectedMarkerId(newMarker.id);
+      setShowMarkerNameInput(true);
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    } else {
       setIsDrawing(true);
-      setCurrentPath(`M ${locationX} ${locationY}`);
+      setCurrentPath(`M ${adjustedX} ${adjustedY}`);
     }
   };
 
   const handleTouchMove = (event: any) => {
-    if (isDrawing && mode === 'draw') {
-      const { locationX, locationY } = event.nativeEvent;
-      setCurrentPath(prev => `${prev} L ${locationX} ${locationY}`);
-    }
+    if (!isDrawing || selectedMarker || isDraggingName) return;
+
+    const { locationX, locationY } = event.nativeEvent;
+    const adjustedX = (locationX - translateX.value) / scale.value;
+    const adjustedY = (locationY - translateY.value) / scale.value;
+
+    setCurrentPath((prev) => `${prev} L ${adjustedX} ${adjustedY}`);
   };
 
   const handleTouchEnd = () => {
-    if (isDrawing && currentPath && mode === 'draw') {
+    if (isDrawing && currentPath) {
       const newPath: DrawPath = {
         id: Date.now().toString(),
         type: selectedBrush,
         path: currentPath,
         color: BRUSH_COLORS[selectedBrush],
-        strokeWidth: brushWidth,
+        strokeWidth: strokeWidth,
       };
-      console.log('Completed path, adding to paths array');
-      setPaths(prev => [...prev, newPath]);
+      setPaths([...paths, newPath]);
       setCurrentPath('');
       setIsDrawing(false);
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -649,22 +293,24 @@ export default function MapBuilderScreen() {
   };
 
   const handleMarkerPress = (markerId: string) => {
-    setSelectedMarkerId(markerId);
-    const marker = markers.find(m => m.id === markerId);
+    const marker = markers.find((m) => m.id === markerId);
     if (marker) {
+      setSelectedMarkerId(markerId);
       setMarkerName(marker.name);
-      setShowNameModal(true);
+      setShowMarkerNameInput(true);
     }
   };
 
   const handleSaveMarkerName = () => {
     if (selectedMarkerId) {
-      setMarkers(prev => prev.map(m => 
-        m.id === selectedMarkerId ? { ...m, name: markerName } : m
-      ));
-      setShowNameModal(false);
-      setSelectedMarkerId(null);
+      setMarkers(
+        markers.map((m) =>
+          m.id === selectedMarkerId ? { ...m, name: markerName } : m
+        )
+      );
+      setShowMarkerNameInput(false);
       setMarkerName('');
+      setSelectedMarkerId(null);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
@@ -680,10 +326,10 @@ export default function MapBuilderScreen() {
             text: 'Delete',
             style: 'destructive',
             onPress: () => {
-              setMarkers(prev => prev.filter(m => m.id !== selectedMarkerId));
-              setShowNameModal(false);
-              setSelectedMarkerId(null);
+              setMarkers(markers.filter((m) => m.id !== selectedMarkerId));
+              setShowMarkerNameInput(false);
               setMarkerName('');
+              setSelectedMarkerId(null);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             },
           },
@@ -695,7 +341,7 @@ export default function MapBuilderScreen() {
   const handleClearMap = () => {
     Alert.alert(
       'Clear Map',
-      'Are you sure you want to clear all drawings and markers?',
+      'Are you sure you want to clear the entire map?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -704,8 +350,6 @@ export default function MapBuilderScreen() {
           onPress: () => {
             setPaths([]);
             setMarkers([]);
-            setCurrentPath('');
-            setIsDrawing(false);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           },
         },
@@ -714,41 +358,47 @@ export default function MapBuilderScreen() {
   };
 
   const handleUndo = () => {
-    if (mode === 'draw' && paths.length > 0) {
-      setPaths(prev => prev.slice(0, -1));
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    } else if (mode === 'marker' && markers.length > 0) {
-      setMarkers(prev => prev.slice(0, -1));
+    if (paths.length > 0) {
+      setPaths(paths.slice(0, -1));
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
   const handleNameLongPress = (markerId: string) => {
-    setEditingNameId(markerId);
+    setIsDraggingName(true);
+    setDraggedNameId(markerId);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
   const handleNameDrag = (event: any, markerId: string) => {
-    if (editingNameId === markerId) {
-      const { locationX, locationY } = event.nativeEvent;
-      setMarkers(prev => prev.map(m => 
-        m.id === markerId ? { ...m, nameX: locationX, nameY: locationY } : m
-      ));
-    }
+    if (!isDraggingName || draggedNameId !== markerId) return;
+
+    const { locationX, locationY } = event.nativeEvent;
+    const adjustedX = (locationX - translateX.value) / scale.value;
+    const adjustedY = (locationY - translateY.value) / scale.value;
+
+    setMarkers(
+      markers.map((m) =>
+        m.id === markerId
+          ? { ...m, nameX: adjustedX, nameY: adjustedY }
+          : m
+      )
+    );
   };
 
   const handleNameDragEnd = () => {
-    setEditingNameId(null);
     setIsDraggingName(false);
+    setDraggedNameId(null);
   };
 
   const handleNameSizeChange = (markerId: string, delta: number) => {
-    setMarkers(prev => prev.map(m => 
-      m.id === markerId ? { 
-        ...m, 
-        nameFontSize: Math.max(8, Math.min(24, (m.nameFontSize || 12) + delta))
-      } : m
-    ));
+    setMarkers(
+      markers.map((m) =>
+        m.id === markerId
+          ? { ...m, nameFontSize: Math.max(10, Math.min(24, (m.nameFontSize || 14) + delta)) }
+          : m
+      )
+    );
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
   };
 
@@ -767,327 +417,216 @@ export default function MapBuilderScreen() {
           </Pressable>
         </View>
 
-        <View style={[styles.infoBar, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-          <IconSymbol name="info.circle" size={16} color={theme.colors.primary} />
-          <Text style={[styles.infoText, { color: theme.colors.text, fontSize: baseFontSize - 3 }]}>
-            {mode === 'marker' ? 'Tap map to place marker, then tap marker to name it. Long press names to move/resize' : 'Draw on the map to create terrain. Pinch to zoom, two fingers to pan'}
-          </Text>
-        </View>
-
-        <View style={styles.modeSelector}>
-          <Pressable
-            style={[
-              styles.modeButton,
-              { backgroundColor: mode === 'draw' ? theme.colors.primary : theme.colors.card },
-            ]}
-            onPress={() => {
-              setMode('draw');
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-          >
-            <IconSymbol 
-              name="paintbrush.fill" 
-              size={20} 
-              color={mode === 'draw' ? '#fff' : theme.colors.text} 
-            />
-            <Text style={[
-              styles.modeText,
-              { color: mode === 'draw' ? '#fff' : theme.colors.text, fontSize: baseFontSize - 2 }
-            ]}>
-              Draw
-            </Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.modeButton,
-              { backgroundColor: mode === 'marker' ? theme.colors.primary : theme.colors.card },
-            ]}
-            onPress={() => {
-              setMode('marker');
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-            }}
-          >
-            <IconSymbol 
-              name="mappin.and.ellipse" 
-              size={20} 
-              color={mode === 'marker' ? '#fff' : theme.colors.text} 
-            />
-            <Text style={[
-              styles.modeText,
-              { color: mode === 'marker' ? '#fff' : theme.colors.text, fontSize: baseFontSize - 2 }
-            ]}>
-              Markers
-            </Text>
-          </Pressable>
-        </View>
-
-        {mode === 'draw' && (
-          <View style={[styles.brushWidthControl, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-            <Text style={[styles.brushWidthLabel, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
-              Brush Width: {brushWidth}
-            </Text>
-            <View style={styles.brushWidthSlider}>
+        <View style={styles.toolsContainer}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.brushes}>
+            {(Object.keys(BRUSH_COLORS) as BrushType[]).map((brush) => (
               <Pressable
+                key={brush}
+                style={[
+                  styles.brushButton,
+                  { backgroundColor: BRUSH_COLORS[brush] },
+                  selectedBrush === brush && !selectedMarker && styles.selectedBrush,
+                ]}
                 onPress={() => {
-                  setBrushWidth(Math.max(5, brushWidth - 5));
+                  setSelectedBrush(brush);
+                  setSelectedMarker(null);
                   Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
-                style={[styles.brushWidthButton, { backgroundColor: theme.colors.primary }]}
               >
-                <IconSymbol name="minus" size={16} color="#fff" />
+                <Text style={styles.brushLabel}>{brush}</Text>
               </Pressable>
-              <View style={styles.brushWidthBar}>
-                <View 
-                  style={[
-                    styles.brushWidthIndicator, 
-                    { 
-                      width: `${(brushWidth / 50) * 100}%`,
-                      backgroundColor: theme.colors.primary 
-                    }
-                  ]} 
-                />
-              </View>
-              <Pressable
-                onPress={() => {
-                  setBrushWidth(Math.min(50, brushWidth + 5));
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-                style={[styles.brushWidthButton, { backgroundColor: theme.colors.primary }]}
-              >
-                <IconSymbol name="plus" size={16} color="#fff" />
-              </Pressable>
-            </View>
-          </View>
-        )}
+            ))}
+          </ScrollView>
 
-        <View style={styles.mapContainer}>
-          <PanGestureHandler onGestureEvent={panHandler} minPointers={2}>
-            <Animated.View style={{ flex: 1 }}>
-              <PinchGestureHandler onGestureEvent={pinchHandler}>
-                <Animated.View style={[styles.canvas, { backgroundColor: '#F5E6D3' }]}>
-                  <View
-                    onStartShouldSetResponder={() => true}
-                    onResponderGrant={handleTouchStart}
-                    onResponderMove={handleTouchMove}
-                    onResponderRelease={handleTouchEnd}
-                    style={{ width: MAP_SIZE, height: MAP_SIZE }}
-                  >
-                    <AnimatedSvg width={MAP_SIZE} height={MAP_SIZE} style={animatedStyle}>
-                      {/* Render saved paths */}
-                      {paths.map((path) => (
-                        <Path
-                          key={path.id}
-                          d={path.path}
-                          stroke={path.color}
-                          strokeWidth={path.strokeWidth || 20}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-                      ))}
-                      
-                      {/* Render current drawing path */}
-                      {currentPath && isDrawing && (
-                        <Path
-                          d={currentPath}
-                          stroke={BRUSH_COLORS[selectedBrush]}
-                          strokeWidth={brushWidth}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          fill="none"
-                        />
-                      )}
-                      
-                      {/* Render markers with fine ink icons */}
-                      {markers.map((marker) => (
-                        <G key={marker.id}>
-                          <G onPress={() => handleMarkerPress(marker.id)}>
-                            <MarkerIcon type={marker.type} x={marker.x} y={marker.y} />
-                          </G>
-                          {marker.name && (
-                            <G
-                              onLongPress={() => handleNameLongPress(marker.id)}
-                              onResponderMove={(e) => handleNameDrag(e, marker.id)}
-                              onResponderRelease={handleNameDragEnd}
-                            >
-                              <SvgText
-                                x={marker.nameX || marker.x}
-                                y={marker.nameY || (marker.y + 28)}
-                                fontSize={marker.nameFontSize || 12}
-                                fill="#1a0f08"
-                                textAnchor="middle"
-                                fontWeight="bold"
-                                fontFamily="serif"
-                              >
-                                {marker.name}
-                              </SvgText>
-                            </G>
-                          )}
-                        </G>
-                      ))}
-                    </AnimatedSvg>
-                  </View>
-                </Animated.View>
-              </PinchGestureHandler>
-            </Animated.View>
-          </PanGestureHandler>
-
-          {/* Zoom controls */}
-          <View style={[styles.zoomControls, { backgroundColor: theme.colors.card }]}>
-            <Pressable onPress={handleZoomIn} style={[styles.zoomButton, { borderBottomWidth: 1, borderBottomColor: theme.colors.border }]}>
-              <IconSymbol name="plus.magnifyingglass" size={24} color={theme.colors.primary} />
-            </Pressable>
-            <Pressable onPress={handleResetZoom} style={[styles.zoomButton, { borderBottomWidth: 1, borderBottomColor: theme.colors.border }]}>
-              <IconSymbol name="arrow.counterclockwise" size={20} color={theme.colors.primary} />
-            </Pressable>
-            <Pressable onPress={handleZoomOut} style={styles.zoomButton}>
-              <IconSymbol name="minus.magnifyingglass" size={24} color={theme.colors.primary} />
-            </Pressable>
-          </View>
-        </View>
-
-        {mode === 'draw' && (
-          <View style={[styles.toolbar, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brushContainer}>
-              {(Object.keys(BRUSH_COLORS) as BrushType[]).map((brush) => (
-                <Pressable
-                  key={brush}
-                  style={[
-                    styles.brushButton,
-                    { 
-                      backgroundColor: BRUSH_COLORS[brush],
-                      borderWidth: selectedBrush === brush ? 3 : 0,
-                      borderColor: theme.colors.primary,
-                    },
-                  ]}
-                  onPress={() => {
-                    setSelectedBrush(brush);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                >
-                  <Text style={[styles.brushLabel, { fontSize: baseFontSize - 4 }]}>
-                    {brush.charAt(0).toUpperCase() + brush.slice(1)}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            <Pressable onPress={handleUndo} style={styles.undoButton}>
-              <IconSymbol name="arrow.uturn.backward" size={24} color={theme.colors.primary} />
-            </Pressable>
-          </View>
-        )}
-
-        {mode === 'marker' && (
-          <View style={[styles.toolbar, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.markerContainer}>
-              {(Object.keys(BRUSH_COLORS).length > 0 ? [
-                'house', 'castle', 'town', 'windmill', 'smith', 'wooden-bridge',
-                'stone-bridge', 'mountain', 'small-mountain', 'lake', 'river',
-                'mountain-range', 'crevice', 'forest', 'tree', 'rock', 'road', 'tower'
-              ] as MarkerType[] : []).map((marker) => (
-                <Pressable
-                  key={marker}
-                  style={[
-                    styles.markerButton,
-                    { 
-                      backgroundColor: theme.colors.background,
-                      borderWidth: selectedMarker === marker ? 3 : 1,
-                      borderColor: selectedMarker === marker ? theme.colors.primary : theme.colors.border,
-                    },
-                  ]}
-                  onPress={() => {
-                    setSelectedMarker(marker);
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  }}
-                >
-                  <View style={styles.markerIconPreview}>
-                    <Svg width={56} height={56} viewBox="-28 -28 56 56">
-                      <MarkerIcon type={marker} x={0} y={0} />
-                    </Svg>
-                  </View>
-                  <Text style={[styles.markerLabel, { color: theme.colors.text, fontSize: baseFontSize - 4 }]}>
-                    {marker.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                  </Text>
-                </Pressable>
-              ))}
-            </ScrollView>
-            <Pressable onPress={handleUndo} style={styles.undoButton}>
-              <IconSymbol name="arrow.uturn.backward" size={24} color={theme.colors.primary} />
-            </Pressable>
-          </View>
-        )}
-
-        <Modal
-          visible={showNameModal}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowNameModal(false)}
-        >
-          <Pressable 
-            style={styles.modalOverlay}
-            onPress={() => setShowNameModal(false)}
-          >
-            <Pressable 
-              style={[styles.modalContent, { backgroundColor: theme.colors.card }]}
-              onPress={(e) => e.stopPropagation()}
+          <View style={styles.strokeWidthContainer}>
+            <Pressable
+              style={[styles.strokeButton, { backgroundColor: theme.colors.card }]}
+              onPress={() => {
+                setStrokeWidth(Math.max(5, strokeWidth - 5));
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
             >
+              <Text style={[styles.strokeButtonText, { color: theme.colors.text }]}>-</Text>
+            </Pressable>
+            <Text style={[styles.strokeWidthText, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
+              {strokeWidth}
+            </Text>
+            <Pressable
+              style={[styles.strokeButton, { backgroundColor: theme.colors.card }]}
+              onPress={() => {
+                setStrokeWidth(Math.min(50, strokeWidth + 5));
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              <Text style={[styles.strokeButtonText, { color: theme.colors.text }]}>+</Text>
+            </Pressable>
+          </View>
+
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.markers}>
+            {(['city', 'village', 'castle', 'dungeon', 'landmark', 'road'] as MarkerType[]).map((marker) => (
+              <Pressable
+                key={marker}
+                style={[
+                  styles.markerButton,
+                  { backgroundColor: theme.colors.card },
+                  selectedMarker === marker && styles.selectedMarker,
+                ]}
+                onPress={() => {
+                  setSelectedMarker(marker);
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+              >
+                <Svg width={40} height={40}>
+                  <MarkerIcon type={marker} x={20} y={20} />
+                </Svg>
+                <Text style={[styles.markerLabel, { color: theme.colors.text, fontSize: baseFontSize - 4 }]}>
+                  {marker}
+                </Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+
+        <View style={styles.zoomControls}>
+          <Pressable style={[styles.zoomButton, { backgroundColor: theme.colors.card }]} onPress={handleZoomIn}>
+            <IconSymbol name="plus" size={20} color={theme.colors.text} />
+          </Pressable>
+          <Pressable style={[styles.zoomButton, { backgroundColor: theme.colors.card }]} onPress={handleResetZoom}>
+            <IconSymbol name="arrow.counterclockwise" size={20} color={theme.colors.text} />
+          </Pressable>
+          <Pressable style={[styles.zoomButton, { backgroundColor: theme.colors.card }]} onPress={handleZoomOut}>
+            <IconSymbol name="minus" size={20} color={theme.colors.text} />
+          </Pressable>
+          <Pressable style={[styles.zoomButton, { backgroundColor: theme.colors.card }]} onPress={handleUndo}>
+            <IconSymbol name="arrow.uturn.backward" size={20} color={theme.colors.text} />
+          </Pressable>
+        </View>
+
+        <PinchGestureHandler onGestureEvent={pinchHandler}>
+          <Animated.View style={[styles.canvasContainer, animatedStyle]}>
+            <View
+              style={styles.canvas}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            >
+              <Svg width={MAP_SIZE} height={MAP_SIZE} style={styles.svg}>
+                <Rect width={MAP_SIZE} height={MAP_SIZE} fill="#F5F5DC" />
+
+                {paths.map((path) => (
+                  <Path
+                    key={path.id}
+                    d={path.path}
+                    stroke={path.color}
+                    strokeWidth={path.strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                ))}
+
+                {currentPath && (
+                  <Path
+                    d={currentPath}
+                    stroke={BRUSH_COLORS[selectedBrush]}
+                    strokeWidth={strokeWidth}
+                    fill="none"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity={0.7}
+                  />
+                )}
+
+                {markers.map((marker) => (
+                  <G key={marker.id}>
+                    <G onPress={() => handleMarkerPress(marker.id)}>
+                      <MarkerIcon type={marker.type} x={marker.x} y={marker.y} />
+                    </G>
+                    {marker.name && (
+                      <SvgText
+                        x={marker.nameX || marker.x}
+                        y={marker.nameY || marker.y + 30}
+                        fontSize={marker.nameFontSize || 14}
+                        fontWeight="bold"
+                        fill="#000"
+                        textAnchor="middle"
+                        onLongPress={() => handleNameLongPress(marker.id)}
+                        onPressIn={(e) => handleNameDrag(e, marker.id)}
+                        onPressOut={handleNameDragEnd}
+                      >
+                        {marker.name}
+                      </SvgText>
+                    )}
+                  </G>
+                ))}
+              </Svg>
+            </View>
+          </Animated.View>
+        </PinchGestureHandler>
+
+        <Modal visible={showMarkerNameInput} transparent animationType="fade">
+          <View style={styles.modalOverlay}>
+            <View style={[styles.modalContent, { backgroundColor: theme.colors.card }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
-                Edit Location
-              </Text>
-              <Text style={[styles.modalSubtitle, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize - 2 }]}>
-                Add a name to this marker or delete it. Long press the name on the map to move or resize it.
+                Marker Name
               </Text>
               <TextInput
-                style={[styles.modalInput, { 
-                  color: theme.colors.text, 
-                  borderColor: theme.colors.border,
-                  fontSize: baseFontSize,
-                }]}
-                placeholder="Enter location name..."
+                style={[styles.modalInput, { color: theme.colors.text, borderColor: theme.colors.border, fontSize: baseFontSize }]}
+                placeholder="Enter marker name..."
                 placeholderTextColor={theme.dark ? '#666' : '#999'}
                 value={markerName}
                 onChangeText={setMarkerName}
                 autoFocus
               />
-              {selectedMarkerId && markers.find(m => m.id === selectedMarkerId)?.name && (
+              {selectedMarkerId && markers.find((m) => m.id === selectedMarkerId)?.name && (
                 <View style={styles.nameSizeControls}>
                   <Text style={[styles.nameSizeLabel, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
-                    Name Size:
+                    Text Size:
                   </Text>
-                  <View style={styles.nameSizeButtons}>
-                    <Pressable
-                      onPress={() => handleNameSizeChange(selectedMarkerId, -2)}
-                      style={[styles.nameSizeButton, { backgroundColor: theme.colors.border }]}
-                    >
-                      <IconSymbol name="textformat.size.smaller" size={18} color={theme.colors.text} />
-                    </Pressable>
-                    <Pressable
-                      onPress={() => handleNameSizeChange(selectedMarkerId, 2)}
-                      style={[styles.nameSizeButton, { backgroundColor: theme.colors.border }]}
-                    >
-                      <IconSymbol name="textformat.size.larger" size={18} color={theme.colors.text} />
-                    </Pressable>
-                  </View>
+                  <Pressable
+                    style={[styles.nameSizeButton, { backgroundColor: theme.colors.background }]}
+                    onPress={() => handleNameSizeChange(selectedMarkerId, -2)}
+                  >
+                    <Text style={[styles.nameSizeButtonText, { color: theme.colors.text }]}>A-</Text>
+                  </Pressable>
+                  <Pressable
+                    style={[styles.nameSizeButton, { backgroundColor: theme.colors.background }]}
+                    onPress={() => handleNameSizeChange(selectedMarkerId, 2)}
+                  >
+                    <Text style={[styles.nameSizeButtonText, { color: theme.colors.text }]}>A+</Text>
+                  </Pressable>
                 </View>
               )}
               <View style={styles.modalButtons}>
+                {selectedMarkerId && markers.find((m) => m.id === selectedMarkerId)?.name && (
+                  <Pressable
+                    style={[styles.modalButton, { backgroundColor: '#FF3B30' }]}
+                    onPress={handleDeleteMarker}
+                  >
+                    <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Delete</Text>
+                  </Pressable>
+                )}
                 <Pressable
-                  style={[styles.modalButton, styles.deleteButton, { backgroundColor: '#FF3B30' }]}
-                  onPress={handleDeleteMarker}
+                  style={[styles.modalButton, { backgroundColor: theme.colors.border }]}
+                  onPress={() => {
+                    setShowMarkerNameInput(false);
+                    setMarkerName('');
+                    setSelectedMarkerId(null);
+                  }}
                 >
-                  <IconSymbol name="trash" size={18} color="#fff" />
-                  <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Delete</Text>
+                  <Text style={[styles.modalButtonText, { color: theme.colors.text, fontSize: baseFontSize }]}>
+                    Cancel
+                  </Text>
                 </Pressable>
                 <Pressable
-                  style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.primary }]}
+                  style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}
                   onPress={handleSaveMarkerName}
                 >
-                  <IconSymbol name="checkmark" size={18} color="#fff" />
                   <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Save</Text>
                 </Pressable>
               </View>
-            </Pressable>
-          </Pressable>
+            </View>
+          </View>
         </Modal>
       </View>
     </GestureHandlerRootView>
@@ -1110,231 +649,154 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
   },
+  title: {
+    fontWeight: 'bold',
+  },
   clearButton: {
     padding: 8,
   },
-  title: {
-    fontWeight: 'bold',
-    flex: 1,
-    textAlign: 'center',
-  },
-  infoBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    gap: 8,
-    borderBottomWidth: 1,
-  },
-  infoText: {
-    flex: 1,
-    fontStyle: 'italic',
-  },
-  modeSelector: {
-    flexDirection: 'row',
-    padding: 16,
+  toolsContainer: {
+    padding: 12,
     gap: 12,
   },
-  modeButton: {
-    flex: 1,
+  brushes: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  modeText: {
-    fontWeight: '600',
-  },
-  brushWidthControl: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  brushWidthLabel: {
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  brushWidthSlider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  brushWidthButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  brushWidthBar: {
-    flex: 1,
-    height: 8,
-    backgroundColor: '#E0E0E0',
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-  brushWidthIndicator: {
-    height: '100%',
-    borderRadius: 4,
-  },
-  mapContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  canvas: {
-    width: MAP_SIZE,
-    height: MAP_SIZE,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 5,
-  },
-  zoomControls: {
-    position: 'absolute',
-    right: 30,
-    top: '50%',
-    marginTop: -60,
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  zoomButton: {
-    width: 48,
-    height: 48,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  toolbar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderTopWidth: 1,
-  },
-  brushContainer: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingRight: 8,
   },
   brushButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    minWidth: 80,
+    marginRight: 8,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectedBrush: {
+    borderColor: '#000',
   },
   brushLabel: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: 'bold',
+    fontSize: 12,
+    textTransform: 'capitalize',
   },
-  markerContainer: {
+  strokeWidthContainer: {
     flexDirection: 'row',
-    gap: 8,
-    paddingRight: 8,
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 8,
+  },
+  strokeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  strokeButtonText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  strokeWidthText: {
+    fontWeight: '600',
+    minWidth: 30,
+    textAlign: 'center',
+  },
+  markers: {
+    flexDirection: 'row',
   },
   markerButton: {
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    justifyContent: 'center',
+    marginRight: 8,
     alignItems: 'center',
-    minWidth: 100,
-    gap: 6,
+    borderWidth: 2,
+    borderColor: 'transparent',
   },
-  markerIconPreview: {
-    width: 56,
-    height: 56,
-    justifyContent: 'center',
-    alignItems: 'center',
+  selectedMarker: {
+    borderColor: '#007AFF',
   },
   markerLabel: {
-    fontWeight: '500',
-    textAlign: 'center',
+    marginTop: 4,
+    textTransform: 'capitalize',
   },
-  undoButton: {
-    padding: 8,
-    marginLeft: 8,
+  zoomControls: {
+    position: 'absolute',
+    right: 16,
+    top: 120,
+    gap: 8,
+    zIndex: 10,
+  },
+  zoomButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  canvasContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  canvas: {
+    width: MAP_SIZE,
+    height: MAP_SIZE,
+  },
+  svg: {
+    backgroundColor: '#F5F5DC',
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    width: '85%',
-    borderRadius: 16,
+    width: '80%',
     padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    borderRadius: 16,
+    gap: 16,
   },
   modalTitle: {
     fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalSubtitle: {
-    marginBottom: 16,
     textAlign: 'center',
   },
   modalInput: {
     borderWidth: 1,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
+    padding: 12,
   },
   nameSizeControls: {
-    marginBottom: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   nameSizeLabel: {
     fontWeight: '600',
-    marginBottom: 8,
-  },
-  nameSizeButtons: {
-    flexDirection: 'row',
-    gap: 8,
   },
   nameSizeButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  nameSizeButtonText: {
+    fontWeight: 'bold',
   },
   modalButtons: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 8,
   },
   modalButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    gap: 6,
-  },
-  deleteButton: {
-    flex: 0.9,
-  },
-  saveButton: {
-    flex: 1.1,
+    alignItems: 'center',
   },
   modalButtonText: {
     color: '#fff',

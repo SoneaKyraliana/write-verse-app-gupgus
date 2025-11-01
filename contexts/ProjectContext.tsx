@@ -12,7 +12,6 @@ export interface CustomCategory {
   id: string;
   name: string;
   notes: Note[];
-  maps: Map[];
 }
 
 export interface DrawPath {
@@ -20,6 +19,7 @@ export interface DrawPath {
   type: string;
   path: string;
   color: string;
+  strokeWidth: number;
 }
 
 export interface MapMarker {
@@ -28,6 +28,9 @@ export interface MapMarker {
   x: number;
   y: number;
   name: string;
+  nameX?: number;
+  nameY?: number;
+  nameFontSize?: number;
 }
 
 export interface Map {
@@ -50,17 +53,7 @@ export interface WorldbuildingCategory {
   environment: Note[];
 }
 
-export interface WorldbuildingWithMaps {
-  religion: { notes: Note[]; maps: Map[] };
-  culture: { notes: Note[]; maps: Map[] };
-  dailyLife: { notes: Note[]; maps: Map[] };
-  socialStructure: { notes: Note[]; maps: Map[] };
-  politicalStructure: { notes: Note[]; maps: Map[] };
-  mythology: { notes: Note[]; maps: Map[] };
-  history: { notes: Note[]; maps: Map[] };
-  geography: { notes: Note[]; maps: Map[] };
-  environment: { notes: Note[]; maps: Map[] };
-}
+export type WorldbuildingWithMaps = WorldbuildingCategory;
 
 export interface Chapter {
   id: string;
@@ -72,7 +65,7 @@ export interface Project {
   id: string;
   name: string;
   createdAt: number;
-  worldbuilding: WorldbuildingWithMaps;
+  worldbuilding: WorldbuildingCategory;
   characters: CustomCategory[];
   settings: CustomCategory[];
   miscellaneous: CustomCategory[];
@@ -105,14 +98,6 @@ interface ProjectContextType {
   addMap: (name: string) => string;
   deleteMap: (mapId: string) => void;
   updateMapData: (mapId: string, paths: DrawPath[], markers: MapMarker[]) => void;
-  addWorldbuildingMap: (category: keyof WorldbuildingWithMaps, name: string) => string;
-  deleteWorldbuildingMap: (category: keyof WorldbuildingWithMaps, mapId: string) => void;
-  getWorldbuildingMap: (category: keyof WorldbuildingWithMaps, mapId: string) => Map | undefined;
-  updateWorldbuildingMapData: (category: keyof WorldbuildingWithMaps, mapId: string, paths: DrawPath[], markers: MapMarker[]) => void;
-  addCustomCategoryMap: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, name: string) => string;
-  deleteCustomCategoryMap: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, mapId: string) => void;
-  getCustomCategoryMap: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, mapId: string) => Map | undefined;
-  updateCustomCategoryMapData: (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, mapId: string, paths: DrawPath[], markers: MapMarker[]) => void;
 }
 
 export interface SearchResult {
@@ -145,32 +130,32 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       if (data) {
         const loadedProjects = JSON.parse(data);
         const migratedProjects = loadedProjects.map((p: any) => {
-          // Migrate old worldbuilding structure to new structure with maps
-          const worldbuilding: WorldbuildingWithMaps = {} as WorldbuildingWithMaps;
+          // Migrate old worldbuilding structure to new structure (notes only)
+          const worldbuilding: WorldbuildingCategory = {} as WorldbuildingCategory;
           const categories = ['religion', 'culture', 'dailyLife', 'socialStructure', 'politicalStructure', 'mythology', 'history', 'geography', 'environment'];
           
           categories.forEach(cat => {
             if (p.worldbuilding && p.worldbuilding[cat]) {
               if (Array.isArray(p.worldbuilding[cat])) {
                 // Old structure - just notes array
-                worldbuilding[cat as keyof WorldbuildingWithMaps] = {
-                  notes: p.worldbuilding[cat],
-                  maps: []
-                };
+                worldbuilding[cat as keyof WorldbuildingCategory] = p.worldbuilding[cat];
+              } else if (p.worldbuilding[cat].notes) {
+                // New structure with maps - extract only notes
+                worldbuilding[cat as keyof WorldbuildingCategory] = p.worldbuilding[cat].notes;
               } else {
-                // New structure - already has notes and maps
-                worldbuilding[cat as keyof WorldbuildingWithMaps] = p.worldbuilding[cat];
+                worldbuilding[cat as keyof WorldbuildingCategory] = [];
               }
             } else {
-              worldbuilding[cat as keyof WorldbuildingWithMaps] = { notes: [], maps: [] };
+              worldbuilding[cat as keyof WorldbuildingCategory] = [];
             }
           });
 
-          // Migrate custom categories to include maps
+          // Migrate custom categories to remove maps
           const migrateCustomCategories = (categories: any[]) => {
             return (categories || []).map((cat: any) => ({
-              ...cat,
-              maps: cat.maps || []
+              id: cat.id,
+              name: cat.name,
+              notes: cat.notes || []
             }));
           };
 
@@ -206,15 +191,15 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       name,
       createdAt: Date.now(),
       worldbuilding: {
-        religion: { notes: [], maps: [] },
-        culture: { notes: [], maps: [] },
-        dailyLife: { notes: [], maps: [] },
-        socialStructure: { notes: [], maps: [] },
-        politicalStructure: { notes: [], maps: [] },
-        mythology: { notes: [], maps: [] },
-        history: { notes: [], maps: [] },
-        geography: { notes: [], maps: [] },
-        environment: { notes: [], maps: [] },
+        religion: [],
+        culture: [],
+        dailyLife: [],
+        socialStructure: [],
+        politicalStructure: [],
+        mythology: [],
+        history: [],
+        geography: [],
+        environment: [],
       },
       characters: [],
       settings: [],
@@ -245,17 +230,14 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
     const updatedProjects = projects.map(p => {
       if (p.id === currentProject.id) {
-        const notes = p.worldbuilding[category].notes.map(n =>
+        const notes = p.worldbuilding[category].map(n =>
           n.id === noteId ? { ...n, content, updatedAt: Date.now() } : n
         );
         return {
           ...p,
           worldbuilding: {
             ...p.worldbuilding,
-            [category]: {
-              ...p.worldbuilding[category],
-              notes
-            },
+            [category]: notes,
           },
         };
       }
@@ -281,10 +263,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           ...p,
           worldbuilding: {
             ...p.worldbuilding,
-            [category]: {
-              ...p.worldbuilding[category],
-              notes: [...p.worldbuilding[category].notes, newNote]
-            },
+            [category]: [...p.worldbuilding[category], newNote],
           },
         };
       }
@@ -305,10 +284,7 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
           ...p,
           worldbuilding: {
             ...p.worldbuilding,
-            [category]: {
-              ...p.worldbuilding[category],
-              notes: p.worldbuilding[category].notes.filter(n => n.id !== noteId)
-            },
+            [category]: p.worldbuilding[category].filter(n => n.id !== noteId),
           },
         };
       }
@@ -326,7 +302,6 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
       id: Date.now().toString(),
       name,
       notes: [],
-      maps: [],
     };
 
     const updatedProjects = projects.map(p => {
@@ -586,8 +561,8 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
 
     projects.forEach(project => {
       // Search worldbuilding notes
-      Object.entries(project.worldbuilding).forEach(([category, data]) => {
-        data.notes.forEach(note => {
+      Object.entries(project.worldbuilding).forEach(([category, notes]) => {
+        notes.forEach(note => {
           if (note.content.toLowerCase().includes(lowerQuery)) {
             results.push({
               projectId: project.id,
@@ -731,188 +706,6 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
     setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
   };
 
-  // Worldbuilding map functions
-  const addWorldbuildingMap = (category: keyof WorldbuildingWithMaps, name: string): string => {
-    if (!currentProject) return '';
-
-    const newMap: Map = {
-      id: Date.now().toString(),
-      name,
-      paths: [],
-      markers: [],
-      createdAt: Date.now(),
-    };
-
-    const updatedProjects = projects.map(p => {
-      if (p.id === currentProject.id) {
-        return {
-          ...p,
-          worldbuilding: {
-            ...p.worldbuilding,
-            [category]: {
-              ...p.worldbuilding[category],
-              maps: [...p.worldbuilding[category].maps, newMap]
-            },
-          },
-        };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
-    return newMap.id;
-  };
-
-  const deleteWorldbuildingMap = (category: keyof WorldbuildingWithMaps, mapId: string) => {
-    if (!currentProject) return;
-
-    const updatedProjects = projects.map(p => {
-      if (p.id === currentProject.id) {
-        return {
-          ...p,
-          worldbuilding: {
-            ...p.worldbuilding,
-            [category]: {
-              ...p.worldbuilding[category],
-              maps: p.worldbuilding[category].maps.filter(m => m.id !== mapId)
-            },
-          },
-        };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
-  };
-
-  const getWorldbuildingMap = (category: keyof WorldbuildingWithMaps, mapId: string): Map | undefined => {
-    if (!currentProject) return undefined;
-    return currentProject.worldbuilding[category].maps.find(m => m.id === mapId);
-  };
-
-  const updateWorldbuildingMapData = (category: keyof WorldbuildingWithMaps, mapId: string, paths: DrawPath[], markers: MapMarker[]) => {
-    if (!currentProject) return;
-
-    const updatedProjects = projects.map(p => {
-      if (p.id === currentProject.id) {
-        return {
-          ...p,
-          worldbuilding: {
-            ...p.worldbuilding,
-            [category]: {
-              ...p.worldbuilding[category],
-              maps: p.worldbuilding[category].maps.map(m =>
-                m.id === mapId ? { ...m, paths, markers } : m
-              )
-            },
-          },
-        };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
-  };
-
-  // Custom category map functions
-  const addCustomCategoryMap = (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, name: string): string => {
-    if (!currentProject) return '';
-
-    const newMap: Map = {
-      id: Date.now().toString(),
-      name,
-      paths: [],
-      markers: [],
-      createdAt: Date.now(),
-    };
-
-    const updatedProjects = projects.map(p => {
-      if (p.id === currentProject.id) {
-        const categories = p[section].map((cat: CustomCategory) => {
-          if (cat.id === categoryId) {
-            return {
-              ...cat,
-              maps: [...cat.maps, newMap],
-            };
-          }
-          return cat;
-        });
-        return {
-          ...p,
-          [section]: categories,
-        };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
-    return newMap.id;
-  };
-
-  const deleteCustomCategoryMap = (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, mapId: string) => {
-    if (!currentProject) return;
-
-    const updatedProjects = projects.map(p => {
-      if (p.id === currentProject.id) {
-        const categories = p[section].map((cat: CustomCategory) => {
-          if (cat.id === categoryId) {
-            return {
-              ...cat,
-              maps: cat.maps.filter(m => m.id !== mapId),
-            };
-          }
-          return cat;
-        });
-        return {
-          ...p,
-          [section]: categories,
-        };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
-  };
-
-  const getCustomCategoryMap = (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, mapId: string): Map | undefined => {
-    if (!currentProject) return undefined;
-    const category = currentProject[section].find((c: CustomCategory) => c.id === categoryId);
-    return category?.maps.find(m => m.id === mapId);
-  };
-
-  const updateCustomCategoryMapData = (section: 'characters' | 'settings' | 'miscellaneous', categoryId: string, mapId: string, paths: DrawPath[], markers: MapMarker[]) => {
-    if (!currentProject) return;
-
-    const updatedProjects = projects.map(p => {
-      if (p.id === currentProject.id) {
-        const categories = p[section].map((cat: CustomCategory) => {
-          if (cat.id === categoryId) {
-            return {
-              ...cat,
-              maps: cat.maps.map(m =>
-                m.id === mapId ? { ...m, paths, markers } : m
-              ),
-            };
-          }
-          return cat;
-        });
-        return {
-          ...p,
-          [section]: categories,
-        };
-      }
-      return p;
-    });
-
-    setProjects(updatedProjects);
-    setCurrentProject(updatedProjects.find(p => p.id === currentProject.id) || null);
-  };
-
   return (
     <ProjectContext.Provider
       value={{
@@ -940,14 +733,6 @@ export function ProjectProvider({ children }: { children: React.ReactNode }) {
         addMap,
         deleteMap,
         updateMapData,
-        addWorldbuildingMap,
-        deleteWorldbuildingMap,
-        getWorldbuildingMap,
-        updateWorldbuildingMapData,
-        addCustomCategoryMap,
-        deleteCustomCategoryMap,
-        getCustomCategoryMap,
-        updateCustomCategoryMapData,
       }}
     >
       {children}

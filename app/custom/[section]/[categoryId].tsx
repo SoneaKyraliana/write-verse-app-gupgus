@@ -1,12 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   Pressable,
-  TextInput,
   Alert,
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
@@ -24,18 +23,22 @@ export default function CustomCategoryScreen() {
     currentProject, 
     addCustomNote, 
     deleteCustomNote,
-    addCustomCategoryMap,
-    deleteCustomCategoryMap
   } = useProjects();
   const { getFontSizeValue } = useSettings();
 
-  const [showMapNameInput, setShowMapNameInput] = useState(false);
-  const [newMapName, setNewMapName] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   const baseFontSize = getFontSizeValue();
 
   const sectionKey = section as 'characters' | 'settings' | 'miscellaneous';
   const category = currentProject?.[sectionKey]?.find(c => c.id === categoryId);
+
+  useEffect(() => {
+    if (currentProject && category !== undefined) {
+      console.log('Custom category loaded:', sectionKey, categoryId, 'Notes:', category?.notes?.length);
+      setIsLoading(false);
+    }
+  }, [currentProject, category]);
 
   const getSectionTitle = () => {
     switch (section) {
@@ -99,53 +102,44 @@ export default function CustomCategoryScreen() {
     );
   };
 
-  const handleAddMap = () => {
-    setShowMapNameInput(true);
-  };
-
-  const handleCreateMap = () => {
-    if (newMapName.trim() && categoryId) {
-      const mapId = addCustomCategoryMap(sectionKey, categoryId as string, newMapName.trim());
-      if (mapId) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setShowMapNameInput(false);
-        setNewMapName('');
-        router.push({
-          pathname: '/maps/builder',
-          params: {
-            mapId,
-            source: 'custom',
-            section: sectionKey,
-            categoryId: categoryId as string,
-          },
-        });
-      }
-    }
-  };
-
-  const handleDeleteMap = (mapId: string, name: string) => {
-    if (!categoryId) return;
-    Alert.alert(
-      'Delete Map',
-      `Are you sure you want to delete "${name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            deleteCustomCategoryMap(sectionKey, categoryId as string, mapId);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          },
-        },
-      ]
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
+          </Pressable>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 4 }]}>
+            Loading...
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: theme.colors.text, fontSize: baseFontSize }]}>
+            Loading...
+          </Text>
+        </View>
+      </View>
     );
-  };
+  }
 
   if (!currentProject || !category) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Text style={{ color: theme.colors.text }}>Loading...</Text>
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
+          </Pressable>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 4 }]}>
+            Error
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: theme.colors.text, fontSize: baseFontSize }]}>
+            No project selected. Please go back and select a project.
+          </Text>
+        </View>
       </View>
     );
   }
@@ -166,93 +160,6 @@ export default function CustomCategoryScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* Maps Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
-              Maps
-            </Text>
-            <Pressable
-              style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleAddMap}
-            >
-              <IconSymbol name="plus" size={20} color="#fff" />
-            </Pressable>
-          </View>
-
-          {showMapNameInput && (
-            <View style={[styles.mapNameInput, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <TextInput
-                style={[styles.input, { color: theme.colors.text, fontSize: baseFontSize }]}
-                placeholder="Enter map name..."
-                placeholderTextColor={theme.dark ? '#666' : '#999'}
-                value={newMapName}
-                onChangeText={setNewMapName}
-                autoFocus
-              />
-              <View style={styles.inputButtons}>
-                <Pressable
-                  style={[styles.inputButton, { backgroundColor: theme.colors.border }]}
-                  onPress={() => {
-                    setShowMapNameInput(false);
-                    setNewMapName('');
-                  }}
-                >
-                  <Text style={[styles.inputButtonText, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.inputButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleCreateMap}
-                >
-                  <Text style={[styles.inputButtonText, { color: '#fff', fontSize: baseFontSize - 2 }]}>
-                    Create
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          {category.maps && category.maps.length > 0 ? (
-            category.maps.map((map) => (
-              <Pressable
-                key={map.id}
-                style={[styles.mapItem, { backgroundColor: theme.colors.card }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push({
-                    pathname: '/maps/builder',
-                    params: {
-                      mapId: map.id,
-                      source: 'custom',
-                      section: sectionKey,
-                      categoryId: categoryId as string,
-                    },
-                  });
-                }}
-              >
-                <View style={styles.mapInfo}>
-                  <IconSymbol name="map.fill" size={24} color={theme.colors.primary} />
-                  <Text style={[styles.mapName, { color: theme.colors.text, fontSize: baseFontSize }]}>
-                    {map.name}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => handleDeleteMap(map.id, map.name)}
-                  style={styles.deleteButton}
-                >
-                  <IconSymbol name="trash" size={20} color="#FF3B30" />
-                </Pressable>
-              </Pressable>
-            ))
-          ) : (
-            <Text style={[styles.emptyText, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
-              No maps yet. Tap + to create one.
-            </Text>
-          )}
-        </View>
-
         {/* Notes Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -341,6 +248,15 @@ const styles = StyleSheet.create({
   title: {
     fontWeight: 'bold',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
   },
@@ -365,46 +281,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  mapNameInput: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  input: {
-    marginBottom: 12,
-    paddingVertical: 8,
-  },
-  inputButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  inputButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  inputButtonText: {
-    fontWeight: '600',
-  },
-  mapItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  mapInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  mapName: {
-    fontWeight: '600',
   },
   noteItem: {
     flexDirection: 'row',

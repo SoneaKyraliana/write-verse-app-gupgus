@@ -7,7 +7,6 @@ import {
   ScrollView,
   Pressable,
   Alert,
-  TextInput,
 } from 'react-native';
 import { useTheme } from '@react-navigation/native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -36,13 +35,9 @@ export default function WorldbuildingScreen() {
     currentProject, 
     addWorldbuildingNote, 
     deleteWorldbuildingNote,
-    addWorldbuildingMap,
-    deleteWorldbuildingMap
   } = useProjects();
   const { getFontSizeValue } = useSettings();
 
-  const [showMapNameInput, setShowMapNameInput] = useState(false);
-  const [newMapName, setNewMapName] = useState('');
   const [isLoading, setIsLoading] = useState(true);
 
   const baseFontSize = getFontSizeValue();
@@ -54,6 +49,7 @@ export default function WorldbuildingScreen() {
   // Set loading to false once we have the data
   useEffect(() => {
     if (currentProject && categoryData !== undefined) {
+      console.log('Worldbuilding category loaded:', categoryKey, 'Notes:', categoryData?.length);
       setIsLoading(false);
     }
   }, [currentProject, categoryData]);
@@ -84,47 +80,6 @@ export default function WorldbuildingScreen() {
           style: 'destructive',
           onPress: () => {
             deleteWorldbuildingNote(categoryKey, noteId);
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-          },
-        },
-      ]
-    );
-  };
-
-  const handleAddMap = () => {
-    setShowMapNameInput(true);
-  };
-
-  const handleCreateMap = () => {
-    if (newMapName.trim()) {
-      const mapId = addWorldbuildingMap(categoryKey, newMapName.trim());
-      if (mapId) {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        setShowMapNameInput(false);
-        setNewMapName('');
-        router.push({
-          pathname: '/maps/builder',
-          params: {
-            mapId,
-            source: 'worldbuilding',
-            category: categoryKey,
-          },
-        });
-      }
-    }
-  };
-
-  const handleDeleteMap = (mapId: string, name: string) => {
-    Alert.alert(
-      'Delete Map',
-      `Are you sure you want to delete "${name}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            deleteWorldbuildingMap(categoryKey, mapId);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
           },
         },
@@ -190,92 +145,6 @@ export default function WorldbuildingScreen() {
       </View>
 
       <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {/* Maps Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
-              Maps
-            </Text>
-            <Pressable
-              style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleAddMap}
-            >
-              <IconSymbol name="plus" size={20} color="#fff" />
-            </Pressable>
-          </View>
-
-          {showMapNameInput && (
-            <View style={[styles.mapNameInput, { backgroundColor: theme.colors.card, borderColor: theme.colors.border }]}>
-              <TextInput
-                style={[styles.input, { color: theme.colors.text, fontSize: baseFontSize }]}
-                placeholder="Enter map name..."
-                placeholderTextColor={theme.dark ? '#666' : '#999'}
-                value={newMapName}
-                onChangeText={setNewMapName}
-                autoFocus
-              />
-              <View style={styles.inputButtons}>
-                <Pressable
-                  style={[styles.inputButton, { backgroundColor: theme.colors.border }]}
-                  onPress={() => {
-                    setShowMapNameInput(false);
-                    setNewMapName('');
-                  }}
-                >
-                  <Text style={[styles.inputButtonText, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
-                    Cancel
-                  </Text>
-                </Pressable>
-                <Pressable
-                  style={[styles.inputButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleCreateMap}
-                >
-                  <Text style={[styles.inputButtonText, { color: '#fff', fontSize: baseFontSize - 2 }]}>
-                    Create
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
-          )}
-
-          {categoryData.maps && categoryData.maps.length > 0 ? (
-            categoryData.maps.map((map) => (
-              <Pressable
-                key={map.id}
-                style={[styles.mapItem, { backgroundColor: theme.colors.card }]}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                  router.push({
-                    pathname: '/maps/builder',
-                    params: {
-                      mapId: map.id,
-                      source: 'worldbuilding',
-                      category: categoryKey,
-                    },
-                  });
-                }}
-              >
-                <View style={styles.mapInfo}>
-                  <IconSymbol name="map.fill" size={24} color={theme.colors.primary} />
-                  <Text style={[styles.mapName, { color: theme.colors.text, fontSize: baseFontSize }]}>
-                    {map.name}
-                  </Text>
-                </View>
-                <Pressable
-                  onPress={() => handleDeleteMap(map.id, map.name)}
-                  style={styles.deleteButton}
-                >
-                  <IconSymbol name="trash" size={20} color="#FF3B30" />
-                </Pressable>
-              </Pressable>
-            ))
-          ) : (
-            <Text style={[styles.emptyText, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
-              No maps yet. Tap + to create one.
-            </Text>
-          )}
-        </View>
-
         {/* Notes Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -290,8 +159,8 @@ export default function WorldbuildingScreen() {
             </Pressable>
           </View>
 
-          {categoryData.notes && categoryData.notes.length > 0 ? (
-            categoryData.notes.map((note) => (
+          {categoryData && categoryData.length > 0 ? (
+            categoryData.map((note) => (
               <Pressable
                 key={note.id}
                 style={[styles.noteItem, { backgroundColor: theme.colors.card }]}
@@ -396,46 +265,6 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  mapNameInput: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  input: {
-    marginBottom: 12,
-    paddingVertical: 8,
-  },
-  inputButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  inputButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  inputButtonText: {
-    fontWeight: '600',
-  },
-  mapItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 12,
-  },
-  mapInfo: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  mapName: {
-    fontWeight: '600',
   },
   noteItem: {
     flexDirection: 'row',
