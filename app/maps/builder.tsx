@@ -17,7 +17,7 @@ import { IconSymbol } from '@/components/IconSymbol';
 import { useProjects, WorldbuildingWithMaps } from '@/contexts/ProjectContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path, Circle, Rect, Text as SvgText, G, Polygon, Ellipse, Line, Defs } from 'react-native-svg';
+import Svg, { Path, Circle, Rect, Text as SvgText, G, Polygon, Ellipse, Line, Defs, ClipPath } from 'react-native-svg';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAP_SIZE = SCREEN_WIDTH - 40;
@@ -52,152 +52,364 @@ const BRUSH_COLORS: Record<BrushType, string> = {
   swamp: '#4A5D23',
 };
 
-// Fine ink marker icon component
+// Enhanced fine ink marker icon component with more elaborate details
 const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) => {
-  const inkColor = '#2C1810';
-  const scale = 0.8;
+  const inkColor = '#1a0f08';
+  const lightInk = '#3d2817';
+  const scale = 0.9;
   
   switch (type) {
     case 'house':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M0,-12 L-10,0 L-8,0 L-8,10 L8,10 L8,0 L10,0 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="-3" y="2" width="6" height="8" fill="none" stroke={inkColor} strokeWidth="1" />
+          {/* Roof */}
+          <Path d="M0,-14 L-12,0 L-10,0 L-10,2 L10,2 L10,0 L12,0 Z" fill="none" stroke={inkColor} strokeWidth="1.8" strokeLinejoin="miter" />
+          {/* Roof details */}
+          <Line x1="-8" y1="-7" x2="-8" y2="0" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="-4" y1="-10.5" x2="-4" y2="0" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="4" y1="-10.5" x2="4" y2="0" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="8" y1="-7" x2="8" y2="0" stroke={lightInk} strokeWidth="0.8" />
+          {/* Walls */}
+          <Rect x="-10" y="2" width="20" height="12" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          {/* Door */}
+          <Rect x="-3" y="6" width="6" height="8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Circle cx="-1" cy="10" r="0.5" fill={inkColor} />
+          {/* Window */}
+          <Rect x="4" y="5" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          <Line x1="6" y1="5" x2="6" y2="9" stroke={inkColor} strokeWidth="0.8" />
+          <Line x1="4" y1="7" x2="8" y2="7" stroke={inkColor} strokeWidth="0.8" />
         </G>
       );
     case 'castle':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Rect x="-12" y="-8" width="24" height="18" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="-14" y="-12" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="-4" y="-12" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="6" y="-12" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M-5,10 L-5,2 L5,2 L5,10" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Main walls */}
+          <Rect x="-14" y="-6" width="28" height="20" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* Battlements */}
+          <Rect x="-16" y="-12" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Rect x="-8" y="-12" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Rect x="0" y="-12" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Rect x="8" y="-12" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          {/* Tower details */}
+          <Line x1="-14" y1="-2" x2="14" y2="-2" stroke={lightInk} strokeWidth="1" />
+          <Line x1="-14" y1="4" x2="14" y2="4" stroke={lightInk} strokeWidth="1" />
+          {/* Gate */}
+          <Path d="M-6,14 L-6,4 Q-6,2 -4,2 L4,2 Q6,2 6,4 L6,14" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          {/* Gate details */}
+          <Line x1="-4" y1="4" x2="-4" y2="14" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="0" y1="4" x2="0" y2="14" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="4" y1="4" x2="4" y2="14" stroke={lightInk} strokeWidth="0.8" />
+          {/* Windows */}
+          <Rect x="-11" y="0" width="3" height="4" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Rect x="8" y="0" width="3" height="4" fill="none" stroke={inkColor} strokeWidth="1" />
         </G>
       );
     case 'town':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Rect x="-10" y="-6" width="8" height="12" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="2" y="-4" width="8" height="10" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="-4" y="-10" width="8" height="16" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Left building */}
+          <Rect x="-12" y="-4" width="8" height="14" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Path d="M-12,-4 L-8,-10 L-4,-4" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Rect x="-10" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Rect x="-7" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          {/* Center building (tallest) */}
+          <Rect x="-5" y="-12" width="10" height="22" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Path d="M-5,-12 L0,-18 L5,-12" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Rect x="-3" y="-6" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Rect x="1" y="-6" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Rect x="-3" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Rect x="1" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Rect x="-2" y="6" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          {/* Right building */}
+          <Rect x="6" y="-2" width="8" height="12" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Path d="M6,-2 L10,-8 L14,-2" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Rect x="8" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
+          <Rect x="11" y="2" width="2" height="3" fill="none" stroke={inkColor} strokeWidth="1" />
         </G>
       );
     case 'windmill':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-4,10 L-2,-8 L2,-8 L4,10 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="0" y1="-8" x2="0" y2="-14" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M0,-14 L-8,-10 M0,-14 L8,-10 M0,-14 L-6,-18 M0,-14 L6,-18" stroke={inkColor} strokeWidth="1.5" />
+          {/* Tower base */}
+          <Path d="M-5,12 L-3,-10 L3,-10 L5,12 Z" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          {/* Tower details */}
+          <Line x1="-4" y1="0" x2="4" y2="0" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="-4.5" y1="6" x2="4.5" y2="6" stroke={lightInk} strokeWidth="0.8" />
+          {/* Door */}
+          <Rect x="-2" y="8" width="4" height="4" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          {/* Windmill blades center */}
+          <Circle cx="0" cy="-10" r="2" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Blade 1 */}
+          <Path d="M0,-10 L-2,-12 L-10,-14 L-12,-16 L-10,-18 L-2,-16 L0,-14" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-2" y1="-12" x2="-10" y2="-18" stroke={lightInk} strokeWidth="0.8" />
+          {/* Blade 2 */}
+          <Path d="M0,-10 L2,-12 L10,-14 L12,-16 L10,-18 L2,-16 L0,-14" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="2" y1="-12" x2="10" y2="-18" stroke={lightInk} strokeWidth="0.8" />
+          {/* Blade 3 */}
+          <Path d="M0,-10 L-2,-8 L-8,-4 L-10,-2 L-8,0 L-2,-4 L0,-6" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-2" y1="-8" x2="-8" y2="0" stroke={lightInk} strokeWidth="0.8" />
+          {/* Blade 4 */}
+          <Path d="M0,-10 L2,-8 L8,-4 L10,-2 L8,0 L2,-4 L0,-6" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="2" y1="-8" x2="8" y2="0" stroke={lightInk} strokeWidth="0.8" />
         </G>
       );
     case 'smith':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Rect x="-8" y="-6" width="16" height="14" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M-6,-2 L-2,-6 L2,-6 L6,-2" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Circle cx="0" cy="2" r="3" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Building */}
+          <Rect x="-10" y="-6" width="20" height="16" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          {/* Roof */}
+          <Path d="M-12,-6 L0,-12 L12,-6" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Line x1="-6" y1="-9" x2="-6" y2="-6" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="0" y1="-12" x2="0" y2="-6" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="6" y1="-9" x2="6" y2="-6" stroke={lightInk} strokeWidth="0.8" />
+          {/* Anvil */}
+          <Path d="M-6,2 L-4,-2 L4,-2 L6,2 L6,4 L-6,4 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="-3" y="4" width="6" height="2" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Hammer */}
+          <Circle cx="8" cy="0" r="2" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="8" y1="2" x2="6" y2="8" stroke={inkColor} strokeWidth="1.5" />
+          {/* Forge fire */}
+          <Path d="M-8,6 L-7,4 L-6,6 L-5,3 L-4,6" fill="none" stroke="#FF6B35" strokeWidth="1.2" />
         </G>
       );
     case 'wooden-bridge':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-12,0 L12,0" stroke={inkColor} strokeWidth="2" />
-          <Line x1="-10" y1="-4" x2="-10" y2="4" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-5" y1="-4" x2="-5" y2="4" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="0" y1="-4" x2="0" y2="4" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="5" y1="-4" x2="5" y2="4" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="10" y1="-4" x2="10" y2="4" stroke={inkColor} strokeWidth="1.5" />
+          {/* Bridge deck */}
+          <Path d="M-14,0 L14,0" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M-14,2 L14,2" stroke={inkColor} strokeWidth="1.5" />
+          {/* Planks */}
+          <Line x1="-12" y1="-4" x2="-12" y2="6" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-8" y1="-4" x2="-8" y2="6" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-4" y1="-4" x2="-4" y2="6" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="0" y1="-4" x2="0" y2="6" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="4" y1="-4" x2="4" y2="6" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="8" y1="-4" x2="8" y2="6" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="12" y1="-4" x2="12" y2="6" stroke={inkColor} strokeWidth="1.5" />
+          {/* Support beams */}
+          <Line x1="-10" y1="-4" x2="-10" y2="2" stroke={lightInk} strokeWidth="1" />
+          <Line x1="-6" y1="-4" x2="-6" y2="2" stroke={lightInk} strokeWidth="1" />
+          <Line x1="-2" y1="-4" x2="-2" y2="2" stroke={lightInk} strokeWidth="1" />
+          <Line x1="2" y1="-4" x2="2" y2="2" stroke={lightInk} strokeWidth="1" />
+          <Line x1="6" y1="-4" x2="6" y2="2" stroke={lightInk} strokeWidth="1" />
+          <Line x1="10" y1="-4" x2="10" y2="2" stroke={lightInk} strokeWidth="1" />
         </G>
       );
     case 'stone-bridge':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-12,4 Q-12,-4 -6,-6 Q0,-8 6,-6 Q12,-4 12,4" fill="none" stroke={inkColor} strokeWidth="2" />
-          <Path d="M-8,4 L-8,-2 M0,4 L0,-4 M8,4 L8,-2" stroke={inkColor} strokeWidth="1.5" />
+          {/* Main arch */}
+          <Path d="M-14,6 Q-14,-2 -8,-5 Q0,-8 8,-5 Q14,-2 14,6" fill="none" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M-14,8 Q-14,0 -8,-3 Q0,-6 8,-3 Q14,0 14,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Stone blocks */}
+          <Line x1="-10" y1="6" x2="-10" y2="-2" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-6" y1="6" x2="-6" y2="-4" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="-2" y1="6" x2="-2" y2="-5" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="2" y1="6" x2="2" y2="-5" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="6" y1="6" x2="6" y2="-4" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="10" y1="6" x2="10" y2="-2" stroke={inkColor} strokeWidth="1.5" />
+          {/* Horizontal mortar lines */}
+          <Path d="M-12,2 Q-8,0 -4,0 Q0,-1 4,0 Q8,0 12,2" stroke={lightInk} strokeWidth="1" />
+          <Path d="M-10,-1 Q-6,-2 -2,-2 Q0,-3 2,-2 Q6,-2 10,-1" stroke={lightInk} strokeWidth="1" />
         </G>
       );
     case 'mountain':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-12,8 L-4,-8 L0,-4 L4,-10 L12,8 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M-4,-8 L-6,-2 M4,-10 L2,-4" stroke={inkColor} strokeWidth="1" />
+          {/* Main peaks */}
+          <Path d="M-14,10 L-6,-10 L-2,-6 L2,-12 L6,-8 L14,10 Z" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* Snow caps */}
+          <Path d="M-6,-10 L-7,-6 L-5,-6 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M2,-12 L1,-8 L3,-8 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Rock details */}
+          <Path d="M-6,-10 L-8,-4 M-6,-10 L-4,-4" stroke={lightInk} strokeWidth="1" />
+          <Path d="M2,-12 L0,-6 M2,-12 L4,-6" stroke={lightInk} strokeWidth="1" />
+          <Path d="M-10,4 L-8,0 M-4,2 L-2,-2" stroke={lightInk} strokeWidth="1" />
+          <Path d="M4,2 L6,-2 M8,4 L10,0" stroke={lightInk} strokeWidth="1" />
         </G>
       );
     case 'small-mountain':
       return (
-        <G transform={`translate(${x}, ${y}) scale(${scale * 0.7})`}>
-          <Path d="M-10,6 L0,-8 L10,6 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M0,-8 L-2,-2" stroke={inkColor} strokeWidth="1" />
+        <G transform={`translate(${x}, ${y}) scale(${scale * 0.75})`}>
+          {/* Single peak */}
+          <Path d="M-12,8 L0,-10 L12,8 Z" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* Snow cap */}
+          <Path d="M0,-10 L-2,-6 L2,-6 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Rock details */}
+          <Path d="M0,-10 L-3,-4 M0,-10 L3,-4" stroke={lightInk} strokeWidth="1" />
+          <Path d="M-6,2 L-4,-2 M6,2 L4,-2" stroke={lightInk} strokeWidth="1" />
         </G>
       );
     case 'lake':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Ellipse cx="0" cy="0" rx="12" ry="8" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M-6,-2 Q-4,-4 -2,-2 Q0,0 2,-2 Q4,-4 6,-2" stroke={inkColor} strokeWidth="1" opacity="0.6" />
+          {/* Lake outline */}
+          <Ellipse cx="0" cy="0" rx="14" ry="9" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* Water ripples */}
+          <Path d="M-8,-3 Q-6,-5 -4,-3 Q-2,-1 0,-3 Q2,-5 4,-3 Q6,-1 8,-3" stroke={inkColor} strokeWidth="1.2" opacity="0.6" />
+          <Path d="M-6,0 Q-4,-2 -2,0 Q0,2 2,0 Q4,-2 6,0" stroke={inkColor} strokeWidth="1.2" opacity="0.6" />
+          <Path d="M-8,3 Q-6,1 -4,3 Q-2,5 0,3 Q2,1 4,3 Q6,5 8,3" stroke={inkColor} strokeWidth="1.2" opacity="0.6" />
+          {/* Shore details */}
+          <Path d="M-12,-4 Q-10,-3 -9,-4" stroke={lightInk} strokeWidth="1" />
+          <Path d="M9,-4 Q10,-3 12,-4" stroke={lightInk} strokeWidth="1" />
         </G>
       );
     case 'river':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-12,-8 Q-8,-4 -4,-6 Q0,-8 4,-4 Q8,-2 12,0" fill="none" stroke={inkColor} strokeWidth="2" />
-          <Path d="M-12,-4 Q-8,0 -4,-2 Q0,-4 4,0 Q8,2 12,4" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* River banks */}
+          <Path d="M-14,-10 Q-10,-6 -6,-8 Q-2,-10 2,-6 Q6,-4 10,-6 Q12,-7 14,-4" fill="none" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M-14,-6 Q-10,-2 -6,-4 Q-2,-6 2,-2 Q6,0 10,-2 Q12,-3 14,0" fill="none" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M-14,6 Q-10,2 -6,4 Q-2,6 2,2 Q6,0 10,2 Q12,3 14,6" fill="none" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M-14,10 Q-10,6 -6,8 Q-2,10 2,6 Q6,4 10,6 Q12,7 14,10" fill="none" stroke={inkColor} strokeWidth="2.5" />
+          {/* Water flow lines */}
+          <Path d="M-12,-8 Q-8,-4 -4,-6 Q0,-8 4,-4 Q8,-2 12,-4" stroke={lightInk} strokeWidth="1" opacity="0.5" />
+          <Path d="M-12,0 Q-8,4 -4,2 Q0,0 4,4 Q8,6 12,4" stroke={lightInk} strokeWidth="1" opacity="0.5" />
+          <Path d="M-12,8 Q-8,4 -4,6 Q0,8 4,4 Q8,2 12,4" stroke={lightInk} strokeWidth="1" opacity="0.5" />
         </G>
       );
     case 'mountain-range':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-14,8 L-8,-6 L-4,-2 L0,-8 L4,-4 L8,-10 L14,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Multiple peaks */}
+          <Path d="M-16,10 L-12,-4 L-10,-2 L-8,-8 L-6,-4 L-4,-10 L-2,-6 L0,-12 L2,-8 L4,-10 L6,-6 L8,-8 L10,-4 L12,-6 L16,10" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* Snow caps */}
+          <Path d="M-8,-8 L-9,-5 L-7,-5 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          <Path d="M-4,-10 L-5,-7 L-3,-7 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          <Path d="M0,-12 L-1,-9 L1,-9 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          <Path d="M4,-10 L3,-7 L5,-7 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          <Path d="M8,-8 L7,-5 L9,-5 Z" fill="none" stroke={inkColor} strokeWidth="1.2" />
+          {/* Rock details */}
+          <Path d="M-12,-4 L-13,0 M-8,-8 L-9,-3" stroke={lightInk} strokeWidth="0.8" />
+          <Path d="M-4,-10 L-5,-5 M0,-12 L-1,-7" stroke={lightInk} strokeWidth="0.8" />
+          <Path d="M4,-10 L3,-5 M8,-8 L7,-3" stroke={lightInk} strokeWidth="0.8" />
         </G>
       );
     case 'crevice':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-10,-8 L-8,8 M-6,-8 L-4,8 M-2,-8 L0,8 M2,-8 L4,8 M6,-8 L8,8" stroke={inkColor} strokeWidth="1.5" />
+          {/* Crevice edges */}
+          <Path d="M-12,-10 L-10,10" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M-8,-10 L-6,10" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M-4,-10 L-2,10" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M0,-10 L2,10" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M4,-10 L6,10" stroke={inkColor} strokeWidth="2.5" />
+          <Path d="M8,-10 L10,10" stroke={inkColor} strokeWidth="2.5" />
+          {/* Depth lines */}
+          <Line x1="-11" y1="-5" x2="-9" y2="-5" stroke={lightInk} strokeWidth="1.2" />
+          <Line x1="-11" y1="0" x2="-9" y2="0" stroke={lightInk} strokeWidth="1.2" />
+          <Line x1="-11" y1="5" x2="-9" y2="5" stroke={lightInk} strokeWidth="1.2" />
+          <Line x1="-7" y1="-2" x2="-5" y2="-2" stroke={lightInk} strokeWidth="1.2" />
+          <Line x1="-7" y1="3" x2="-5" y2="3" stroke={lightInk} strokeWidth="1.2" />
+          <Line x1="-3" y1="0" x2="-1" y2="0" stroke={lightInk} strokeWidth="1.2" />
+          <Line x1="1" y1="-3" x2="3" y2="-3" stroke={lightInk} strokeWidth="1.2" />
+          <Line x1="5" y1="2" x2="7" y2="2" stroke={lightInk} strokeWidth="1.2" />
+          <Line x1="9" y1="-1" x2="11" y2="-1" stroke={lightInk} strokeWidth="1.2" />
         </G>
       );
     case 'forest':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-8,8 L-8,2 L-10,-2 L-8,-2 L-8,-6 L-6,-2 L-4,-2 L-6,2 L-6,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M0,8 L0,0 L-2,-4 L0,-4 L0,-8 L2,-4 L4,-4 L2,0 L2,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M6,8 L6,2 L4,-2 L6,-2 L6,-6 L8,-2 L10,-2 L8,2 L8,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Left tree */}
+          <Line x1="-10" y1="10" x2="-10" y2="2" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M-10,2 L-14,-2 L-12,-2 L-14,-6 L-12,-6 L-10,-10 L-8,-6 L-6,-6 L-8,-2 L-6,-2 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M-12,-4 L-10,-10 L-8,-4" stroke={lightInk} strokeWidth="0.8" />
+          {/* Center tree */}
+          <Line x1="0" y1="10" x2="0" y2="0" stroke={inkColor} strokeWidth="1.8" />
+          <Path d="M0,0 L-5,-5 L-3,-5 L-5,-9 L-3,-9 L0,-14 L3,-9 L5,-9 L3,-5 L5,-5 Z" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Path d="M-3,-7 L0,-14 L3,-7" stroke={lightInk} strokeWidth="1" />
+          {/* Right tree */}
+          <Line x1="10" y1="10" x2="10" y2="2" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M10,2 L6,-2 L8,-2 L6,-6 L8,-6 L10,-10 L12,-6 L14,-6 L12,-2 L14,-2 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Path d="M8,-4 L10,-10 L12,-4" stroke={lightInk} strokeWidth="0.8" />
+          {/* Ground bushes */}
+          <Path d="M-14,10 Q-12,8 -10,10" stroke={inkColor} strokeWidth="1.2" />
+          <Path d="M-6,10 Q-4,8 -2,10" stroke={inkColor} strokeWidth="1.2" />
+          <Path d="M2,10 Q4,8 6,10" stroke={inkColor} strokeWidth="1.2" />
+          <Path d="M10,10 Q12,8 14,10" stroke={inkColor} strokeWidth="1.2" />
         </G>
       );
     case 'tree':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M0,8 L0,0 L-3,-4 L0,-4 L0,-8 L3,-4 L6,-4 L3,0 L3,8" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-1" y1="8" x2="1" y2="8" stroke={inkColor} strokeWidth="2" />
+          {/* Trunk */}
+          <Path d="M-2,10 L-2,0 L2,0 L2,10" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Line x1="-1" y1="10" x2="1" y2="10" stroke={inkColor} strokeWidth="2.5" />
+          {/* Trunk texture */}
+          <Line x1="-1" y1="3" x2="1" y2="3" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="-1" y1="6" x2="1" y2="6" stroke={lightInk} strokeWidth="0.8" />
+          {/* Foliage layers */}
+          <Path d="M0,0 L-6,-4 L-4,-4 L-6,-8 L-4,-8 L0,-12 L4,-8 L6,-8 L4,-4 L6,-4 Z" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Path d="M-4,-6 L0,-12 L4,-6" stroke={lightInk} strokeWidth="1" />
+          <Path d="M-5,-2 L0,-6 L5,-2" stroke={lightInk} strokeWidth="1" />
+          {/* Roots */}
+          <Path d="M-2,10 Q-4,11 -5,12" stroke={inkColor} strokeWidth="1.2" />
+          <Path d="M2,10 Q4,11 5,12" stroke={inkColor} strokeWidth="1.2" />
         </G>
       );
     case 'rock':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-8,4 L-6,-4 L-2,-6 L4,-4 L8,2 L4,6 L-4,6 Z" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Path d="M-4,0 L2,-2 M0,4 L4,2" stroke={inkColor} strokeWidth="1" />
+          {/* Main rock shape */}
+          <Path d="M-10,6 L-8,-6 L-4,-8 L2,-7 L6,-4 L10,4 L6,8 L-2,8 L-6,7 Z" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* Rock texture and cracks */}
+          <Path d="M-6,-2 L-2,-4 L2,-2 L4,2" stroke={lightInk} strokeWidth="1.2" />
+          <Path d="M-4,2 L0,0 L4,3 L6,6" stroke={lightInk} strokeWidth="1.2" />
+          <Path d="M-8,-2 L-6,2 L-4,4" stroke={lightInk} strokeWidth="1" />
+          <Path d="M2,-6 L4,-2 L6,0" stroke={lightInk} strokeWidth="1" />
+          {/* Shading lines */}
+          <Line x1="-7" y1="0" x2="-5" y2="2" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="-3" y1="5" x2="-1" y2="7" stroke={lightInk} strokeWidth="0.8" />
+          <Line x1="3" y1="4" x2="5" y2="6" stroke={lightInk} strokeWidth="0.8" />
         </G>
       );
     case 'road':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Path d="M-12,-4 L12,-4 M-12,4 L12,4" stroke={inkColor} strokeWidth="1.5" />
-          <Line x1="-8" y1="0" x2="-4" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="2,2" />
-          <Line x1="0" y1="0" x2="4" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="2,2" />
-          <Line x1="8" y1="0" x2="12" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="2,2" />
+          {/* Road edges */}
+          <Path d="M-14,-5 L14,-5" stroke={inkColor} strokeWidth="2" />
+          <Path d="M-14,5 L14,5" stroke={inkColor} strokeWidth="2" />
+          {/* Center dashed line */}
+          <Line x1="-12" y1="0" x2="-8" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
+          <Line x1="-6" y1="0" x2="-2" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
+          <Line x1="0" y1="0" x2="4" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
+          <Line x1="6" y1="0" x2="10" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
+          <Line x1="12" y1="0" x2="14" y2="0" stroke={inkColor} strokeWidth="1.5" strokeDasharray="3,2" />
+          {/* Road texture */}
+          <Path d="M-10,-3 L-8,-1 M-4,-2 L-2,0" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          <Path d="M2,-1 L4,1 M8,-2 L10,0" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          <Path d="M-12,2 L-10,4 M-6,1 L-4,3" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
+          <Path d="M0,2 L2,4 M6,1 L8,3" stroke={lightInk} strokeWidth="0.8" opacity="0.5" />
         </G>
       );
     case 'tower':
       return (
         <G transform={`translate(${x}, ${y}) scale(${scale})`}>
-          <Rect x="-4" y="-10" width="8" height="20" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="-6" y="-14" width="12" height="4" fill="none" stroke={inkColor} strokeWidth="1.5" />
-          <Rect x="-2" y="-4" width="4" height="6" fill="none" stroke={inkColor} strokeWidth="1" />
+          {/* Tower base */}
+          <Rect x="-5" y="-8" width="10" height="22" fill="none" stroke={inkColor} strokeWidth="2" />
+          {/* Battlements */}
+          <Rect x="-7" y="-14" width="14" height="6" fill="none" stroke={inkColor} strokeWidth="1.8" />
+          <Rect x="-7" y="-14" width="3" height="3" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="-1.5" y="-14" width="3" height="3" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Rect x="4" y="-14" width="3" height="3" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          {/* Tower details */}
+          <Line x1="-5" y1="-2" x2="5" y2="-2" stroke={lightInk} strokeWidth="1" />
+          <Line x1="-5" y1="4" x2="5" y2="4" stroke={lightInk} strokeWidth="1" />
+          <Line x1="-5" y1="10" x2="5" y2="10" stroke={lightInk} strokeWidth="1" />
+          {/* Windows */}
+          <Rect x="-2" y="-5" width="4" height="5" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="0" y1="-5" x2="0" y2="0" stroke={inkColor} strokeWidth="1" />
+          <Line x1="-2" y1="-2.5" x2="2" y2="-2.5" stroke={inkColor} strokeWidth="1" />
+          <Rect x="-2" y="1" width="4" height="5" fill="none" stroke={inkColor} strokeWidth="1.5" />
+          <Line x1="0" y1="1" x2="0" y2="6" stroke={inkColor} strokeWidth="1" />
+          <Line x1="-2" y1="3.5" x2="2" y2="3.5" stroke={inkColor} strokeWidth="1" />
+          {/* Door */}
+          <Path d="M-2,14 L-2,8 Q-2,7 0,7 Q2,7 2,8 L2,14" fill="none" stroke={inkColor} strokeWidth="1.5" />
         </G>
       );
     default:
-      return <Circle cx={x} cy={y} r="8" fill="none" stroke={inkColor} strokeWidth="1.5" />;
+      return <Circle cx={x} cy={y} r="8" fill="none" stroke={inkColor} strokeWidth="1.8" />;
   }
 };
 
@@ -362,11 +574,24 @@ export default function MapBuilderScreen() {
 
   const handleDeleteMarker = () => {
     if (selectedMarkerId) {
-      setMarkers(prev => prev.filter(m => m.id !== selectedMarkerId));
-      setShowNameModal(false);
-      setSelectedMarkerId(null);
-      setMarkerName('');
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Alert.alert(
+        'Delete Marker',
+        'Are you sure you want to delete this marker?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: () => {
+              setMarkers(prev => prev.filter(m => m.id !== selectedMarkerId));
+              setShowNameModal(false);
+              setSelectedMarkerId(null);
+              setMarkerName('');
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            },
+          },
+        ]
+      );
     }
   };
 
@@ -413,6 +638,13 @@ export default function MapBuilderScreen() {
         <Pressable onPress={handleClearMap} style={styles.clearButton}>
           <IconSymbol name="trash" size={20} color="#FF3B30" />
         </Pressable>
+      </View>
+
+      <View style={[styles.infoBar, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+        <IconSymbol name="info.circle" size={16} color={theme.colors.primary} />
+        <Text style={[styles.infoText, { color: theme.colors.text, fontSize: baseFontSize - 3 }]}>
+          {mode === 'marker' ? 'Tap map to place marker, then tap marker to name it' : 'Draw on the map to create terrain'}
+        </Text>
       </View>
 
       <View style={styles.modeSelector}>
@@ -503,9 +735,9 @@ export default function MapBuilderScreen() {
                 {marker.name && (
                   <SvgText
                     x={marker.x}
-                    y={marker.y + 25}
-                    fontSize={11}
-                    fill="#2C1810"
+                    y={marker.y + 28}
+                    fontSize={12}
+                    fill="#1a0f08"
                     textAnchor="middle"
                     fontWeight="bold"
                     fontFamily="serif"
@@ -574,7 +806,7 @@ export default function MapBuilderScreen() {
                 }}
               >
                 <View style={styles.markerIconPreview}>
-                  <Svg width={48} height={48} viewBox="-24 -24 48 48">
+                  <Svg width={56} height={56} viewBox="-28 -28 56 56">
                     <MarkerIcon type={marker} x={0} y={0} />
                   </Svg>
                 </View>
@@ -605,7 +837,10 @@ export default function MapBuilderScreen() {
             onPress={(e) => e.stopPropagation()}
           >
             <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
-              Name Location
+              Edit Location
+            </Text>
+            <Text style={[styles.modalSubtitle, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize - 2 }]}>
+              Add a name to this marker or delete it
             </Text>
             <TextInput
               style={[styles.modalInput, { 
@@ -621,15 +856,17 @@ export default function MapBuilderScreen() {
             />
             <View style={styles.modalButtons}>
               <Pressable
-                style={[styles.modalButton, { backgroundColor: '#FF3B30' }]}
+                style={[styles.modalButton, styles.deleteButton, { backgroundColor: '#FF3B30' }]}
                 onPress={handleDeleteMarker}
               >
+                <IconSymbol name="trash" size={18} color="#fff" />
                 <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Delete</Text>
               </Pressable>
               <Pressable
-                style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}
+                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.primary }]}
                 onPress={handleSaveMarkerName}
               >
+                <IconSymbol name="checkmark" size={18} color="#fff" />
                 <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Save</Text>
               </Pressable>
             </View>
@@ -663,6 +900,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
+  },
+  infoBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    gap: 8,
+    borderBottomWidth: 1,
+  },
+  infoText: {
+    flex: 1,
+    fontStyle: 'italic',
   },
   modeSelector: {
     flexDirection: 'row',
@@ -737,8 +986,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   markerIconPreview: {
-    width: 48,
-    height: 48,
+    width: 56,
+    height: 56,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -752,12 +1001,12 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    width: '80%',
+    width: '85%',
     borderRadius: 16,
     padding: 24,
     shadowColor: '#000',
@@ -768,6 +1017,10 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  modalSubtitle: {
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -784,9 +1037,18 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 12,
     borderRadius: 8,
-    alignItems: 'center',
+    gap: 6,
+  },
+  deleteButton: {
+    flex: 0.9,
+  },
+  saveButton: {
+    flex: 1.1,
   },
   modalButtonText: {
     color: '#fff',
