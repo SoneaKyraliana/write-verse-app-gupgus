@@ -18,6 +18,8 @@ import { useProjects, WorldbuildingWithMaps } from '@/contexts/ProjectContext';
 import { useSettings } from '@/contexts/SettingsContext';
 import * as Haptics from 'expo-haptics';
 import Svg, { Path, Circle, Rect, Text as SvgText, G, Polygon, Ellipse, Line, Defs, ClipPath } from 'react-native-svg';
+import { GestureHandlerRootView, PinchGestureHandler, PanGestureHandler } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, useAnimatedGestureHandler, withSpring } from 'react-native-reanimated';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const MAP_SIZE = SCREEN_WIDTH - 40;
@@ -441,6 +443,8 @@ const MarkerIcon = ({ type, x, y }: { type: MarkerType; x: number; y: number }) 
   }
 };
 
+const AnimatedSvg = Animated.createAnimatedComponent(Svg);
+
 export default function MapBuilderScreen() {
   const theme = useTheme();
   const router = useRouter();
@@ -470,6 +474,14 @@ export default function MapBuilderScreen() {
   const [brushWidth, setBrushWidth] = useState(20);
   const [editingNameId, setEditingNameId] = useState<string | null>(null);
   const [isDraggingName, setIsDraggingName] = useState(false);
+
+  // Zoom and pan state
+  const scale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const translateY = useSharedValue(0);
+  const savedScale = useSharedValue(1);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
 
   const baseFontSize = getFontSizeValue();
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -537,6 +549,59 @@ export default function MapBuilderScreen() {
       }
     };
   }, [paths, markers, isLoaded]);
+
+  // Pinch gesture handler
+  const pinchHandler = useAnimatedGestureHandler({
+    onStart: () => {
+      savedScale.value = scale.value;
+    },
+    onActive: (event) => {
+      scale.value = Math.max(0.5, Math.min(savedScale.value * event.scale, 3));
+    },
+    onEnd: () => {
+      // Optionally snap back if zoomed out too much
+      if (scale.value < 0.5) {
+        scale.value = withSpring(0.5);
+      }
+    },
+  });
+
+  // Pan gesture handler
+  const panHandler = useAnimatedGestureHandler({
+    onStart: () => {
+      savedTranslateX.value = translateX.value;
+      savedTranslateY.value = translateY.value;
+    },
+    onActive: (event) => {
+      translateX.value = savedTranslateX.value + event.translationX;
+      translateY.value = savedTranslateY.value + event.translationY;
+    },
+  });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: translateX.value },
+      { translateY: translateY.value },
+      { scale: scale.value },
+    ],
+  }));
+
+  const handleZoomIn = () => {
+    scale.value = withSpring(Math.min(scale.value + 0.2, 3));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleZoomOut = () => {
+    scale.value = withSpring(Math.max(scale.value - 0.2, 0.5));
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+  };
+
+  const handleResetZoom = () => {
+    scale.value = withSpring(1);
+    translateX.value = withSpring(0);
+    translateY.value = withSpring(0);
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  };
 
   const handleTouchStart = (event: any) => {
     const { locationX, locationY } = event.nativeEvent;
@@ -688,321 +753,344 @@ export default function MapBuilderScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
-        </Pressable>
-        <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 4 }]}>
-          Map Builder
-        </Text>
-        <Pressable onPress={handleClearMap} style={styles.clearButton}>
-          <IconSymbol name="trash" size={20} color="#FF3B30" />
-        </Pressable>
-      </View>
-
-      <View style={[styles.infoBar, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-        <IconSymbol name="info.circle" size={16} color={theme.colors.primary} />
-        <Text style={[styles.infoText, { color: theme.colors.text, fontSize: baseFontSize - 3 }]}>
-          {mode === 'marker' ? 'Tap map to place marker, then tap marker to name it. Long press names to move/resize' : 'Draw on the map to create terrain. Adjust brush width with slider'}
-        </Text>
-      </View>
-
-      <View style={styles.modeSelector}>
-        <Pressable
-          style={[
-            styles.modeButton,
-            { backgroundColor: mode === 'draw' ? theme.colors.primary : theme.colors.card },
-          ]}
-          onPress={() => {
-            setMode('draw');
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }}
-        >
-          <IconSymbol 
-            name="paintbrush.fill" 
-            size={20} 
-            color={mode === 'draw' ? '#fff' : theme.colors.text} 
-          />
-          <Text style={[
-            styles.modeText,
-            { color: mode === 'draw' ? '#fff' : theme.colors.text, fontSize: baseFontSize - 2 }
-          ]}>
-            Draw
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
+          </Pressable>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 4 }]}>
+            Map Builder
           </Text>
-        </Pressable>
-        <Pressable
-          style={[
-            styles.modeButton,
-            { backgroundColor: mode === 'marker' ? theme.colors.primary : theme.colors.card },
-          ]}
-          onPress={() => {
-            setMode('marker');
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }}
-        >
-          <IconSymbol 
-            name="mappin.and.ellipse" 
-            size={20} 
-            color={mode === 'marker' ? '#fff' : theme.colors.text} 
-          />
-          <Text style={[
-            styles.modeText,
-            { color: mode === 'marker' ? '#fff' : theme.colors.text, fontSize: baseFontSize - 2 }
-          ]}>
-            Markers
-          </Text>
-        </Pressable>
-      </View>
+          <Pressable onPress={handleClearMap} style={styles.clearButton}>
+            <IconSymbol name="trash" size={20} color="#FF3B30" />
+          </Pressable>
+        </View>
 
-      {mode === 'draw' && (
-        <View style={[styles.brushWidthControl, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
-          <Text style={[styles.brushWidthLabel, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
-            Brush Width: {brushWidth}
+        <View style={[styles.infoBar, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+          <IconSymbol name="info.circle" size={16} color={theme.colors.primary} />
+          <Text style={[styles.infoText, { color: theme.colors.text, fontSize: baseFontSize - 3 }]}>
+            {mode === 'marker' ? 'Tap map to place marker, then tap marker to name it. Long press names to move/resize' : 'Draw on the map to create terrain. Pinch to zoom, two fingers to pan'}
           </Text>
-          <View style={styles.brushWidthSlider}>
-            <Pressable
-              onPress={() => {
-                setBrushWidth(Math.max(5, brushWidth - 5));
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              style={[styles.brushWidthButton, { backgroundColor: theme.colors.primary }]}
-            >
-              <IconSymbol name="minus" size={16} color="#fff" />
-            </Pressable>
-            <View style={styles.brushWidthBar}>
-              <View 
-                style={[
-                  styles.brushWidthIndicator, 
-                  { 
-                    width: `${(brushWidth / 50) * 100}%`,
-                    backgroundColor: theme.colors.primary 
-                  }
-                ]} 
-              />
+        </View>
+
+        <View style={styles.modeSelector}>
+          <Pressable
+            style={[
+              styles.modeButton,
+              { backgroundColor: mode === 'draw' ? theme.colors.primary : theme.colors.card },
+            ]}
+            onPress={() => {
+              setMode('draw');
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+          >
+            <IconSymbol 
+              name="paintbrush.fill" 
+              size={20} 
+              color={mode === 'draw' ? '#fff' : theme.colors.text} 
+            />
+            <Text style={[
+              styles.modeText,
+              { color: mode === 'draw' ? '#fff' : theme.colors.text, fontSize: baseFontSize - 2 }
+            ]}>
+              Draw
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.modeButton,
+              { backgroundColor: mode === 'marker' ? theme.colors.primary : theme.colors.card },
+            ]}
+            onPress={() => {
+              setMode('marker');
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }}
+          >
+            <IconSymbol 
+              name="mappin.and.ellipse" 
+              size={20} 
+              color={mode === 'marker' ? '#fff' : theme.colors.text} 
+            />
+            <Text style={[
+              styles.modeText,
+              { color: mode === 'marker' ? '#fff' : theme.colors.text, fontSize: baseFontSize - 2 }
+            ]}>
+              Markers
+            </Text>
+          </Pressable>
+        </View>
+
+        {mode === 'draw' && (
+          <View style={[styles.brushWidthControl, { backgroundColor: theme.colors.card, borderBottomColor: theme.colors.border }]}>
+            <Text style={[styles.brushWidthLabel, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
+              Brush Width: {brushWidth}
+            </Text>
+            <View style={styles.brushWidthSlider}>
+              <Pressable
+                onPress={() => {
+                  setBrushWidth(Math.max(5, brushWidth - 5));
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                style={[styles.brushWidthButton, { backgroundColor: theme.colors.primary }]}
+              >
+                <IconSymbol name="minus" size={16} color="#fff" />
+              </Pressable>
+              <View style={styles.brushWidthBar}>
+                <View 
+                  style={[
+                    styles.brushWidthIndicator, 
+                    { 
+                      width: `${(brushWidth / 50) * 100}%`,
+                      backgroundColor: theme.colors.primary 
+                    }
+                  ]} 
+                />
+              </View>
+              <Pressable
+                onPress={() => {
+                  setBrushWidth(Math.min(50, brushWidth + 5));
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                }}
+                style={[styles.brushWidthButton, { backgroundColor: theme.colors.primary }]}
+              >
+                <IconSymbol name="plus" size={16} color="#fff" />
+              </Pressable>
             </View>
-            <Pressable
-              onPress={() => {
-                setBrushWidth(Math.min(50, brushWidth + 5));
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
-              style={[styles.brushWidthButton, { backgroundColor: theme.colors.primary }]}
-            >
-              <IconSymbol name="plus" size={16} color="#fff" />
+          </View>
+        )}
+
+        <View style={styles.mapContainer}>
+          <PanGestureHandler onGestureEvent={panHandler} minPointers={2}>
+            <Animated.View style={{ flex: 1 }}>
+              <PinchGestureHandler onGestureEvent={pinchHandler}>
+                <Animated.View style={[styles.canvas, { backgroundColor: '#F5E6D3' }]}>
+                  <View
+                    onStartShouldSetResponder={() => true}
+                    onResponderGrant={handleTouchStart}
+                    onResponderMove={handleTouchMove}
+                    onResponderRelease={handleTouchEnd}
+                    style={{ width: MAP_SIZE, height: MAP_SIZE }}
+                  >
+                    <AnimatedSvg width={MAP_SIZE} height={MAP_SIZE} style={animatedStyle}>
+                      {/* Render saved paths */}
+                      {paths.map((path) => (
+                        <Path
+                          key={path.id}
+                          d={path.path}
+                          stroke={path.color}
+                          strokeWidth={path.strokeWidth || 20}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                      ))}
+                      
+                      {/* Render current drawing path */}
+                      {currentPath && isDrawing && (
+                        <Path
+                          d={currentPath}
+                          stroke={BRUSH_COLORS[selectedBrush]}
+                          strokeWidth={brushWidth}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          fill="none"
+                        />
+                      )}
+                      
+                      {/* Render markers with fine ink icons */}
+                      {markers.map((marker) => (
+                        <G key={marker.id}>
+                          <G onPress={() => handleMarkerPress(marker.id)}>
+                            <MarkerIcon type={marker.type} x={marker.x} y={marker.y} />
+                          </G>
+                          {marker.name && (
+                            <G
+                              onLongPress={() => handleNameLongPress(marker.id)}
+                              onResponderMove={(e) => handleNameDrag(e, marker.id)}
+                              onResponderRelease={handleNameDragEnd}
+                            >
+                              <SvgText
+                                x={marker.nameX || marker.x}
+                                y={marker.nameY || (marker.y + 28)}
+                                fontSize={marker.nameFontSize || 12}
+                                fill="#1a0f08"
+                                textAnchor="middle"
+                                fontWeight="bold"
+                                fontFamily="serif"
+                              >
+                                {marker.name}
+                              </SvgText>
+                            </G>
+                          )}
+                        </G>
+                      ))}
+                    </AnimatedSvg>
+                  </View>
+                </Animated.View>
+              </PinchGestureHandler>
+            </Animated.View>
+          </PanGestureHandler>
+
+          {/* Zoom controls */}
+          <View style={[styles.zoomControls, { backgroundColor: theme.colors.card }]}>
+            <Pressable onPress={handleZoomIn} style={[styles.zoomButton, { borderBottomWidth: 1, borderBottomColor: theme.colors.border }]}>
+              <IconSymbol name="plus.magnifyingglass" size={24} color={theme.colors.primary} />
+            </Pressable>
+            <Pressable onPress={handleResetZoom} style={[styles.zoomButton, { borderBottomWidth: 1, borderBottomColor: theme.colors.border }]}>
+              <IconSymbol name="arrow.counterclockwise" size={20} color={theme.colors.primary} />
+            </Pressable>
+            <Pressable onPress={handleZoomOut} style={styles.zoomButton}>
+              <IconSymbol name="minus.magnifyingglass" size={24} color={theme.colors.primary} />
             </Pressable>
           </View>
         </View>
-      )}
 
-      <View style={styles.mapContainer}>
-        <View
-          style={[styles.canvas, { backgroundColor: '#F5E6D3' }]}
-          onStartShouldSetResponder={() => true}
-          onResponderGrant={handleTouchStart}
-          onResponderMove={handleTouchMove}
-          onResponderRelease={handleTouchEnd}
-        >
-          <Svg width={MAP_SIZE} height={MAP_SIZE}>
-            {/* Render saved paths */}
-            {paths.map((path) => (
-              <Path
-                key={path.id}
-                d={path.path}
-                stroke={path.color}
-                strokeWidth={path.strokeWidth || 20}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            ))}
-            
-            {/* Render current drawing path */}
-            {currentPath && isDrawing && (
-              <Path
-                d={currentPath}
-                stroke={BRUSH_COLORS[selectedBrush]}
-                strokeWidth={brushWidth}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            )}
-            
-            {/* Render markers with fine ink icons */}
-            {markers.map((marker) => (
-              <G key={marker.id}>
-                <G onPress={() => handleMarkerPress(marker.id)}>
-                  <MarkerIcon type={marker.type} x={marker.x} y={marker.y} />
-                </G>
-                {marker.name && (
-                  <G
-                    onLongPress={() => handleNameLongPress(marker.id)}
-                    onResponderMove={(e) => handleNameDrag(e, marker.id)}
-                    onResponderRelease={handleNameDragEnd}
-                  >
-                    <SvgText
-                      x={marker.nameX || marker.x}
-                      y={marker.nameY || (marker.y + 28)}
-                      fontSize={marker.nameFontSize || 12}
-                      fill="#1a0f08"
-                      textAnchor="middle"
-                      fontWeight="bold"
-                      fontFamily="serif"
-                    >
-                      {marker.name}
-                    </SvgText>
-                  </G>
-                )}
-              </G>
-            ))}
-          </Svg>
-        </View>
-      </View>
+        {mode === 'draw' && (
+          <View style={[styles.toolbar, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brushContainer}>
+              {(Object.keys(BRUSH_COLORS) as BrushType[]).map((brush) => (
+                <Pressable
+                  key={brush}
+                  style={[
+                    styles.brushButton,
+                    { 
+                      backgroundColor: BRUSH_COLORS[brush],
+                      borderWidth: selectedBrush === brush ? 3 : 0,
+                      borderColor: theme.colors.primary,
+                    },
+                  ]}
+                  onPress={() => {
+                    setSelectedBrush(brush);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                >
+                  <Text style={[styles.brushLabel, { fontSize: baseFontSize - 4 }]}>
+                    {brush.charAt(0).toUpperCase() + brush.slice(1)}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Pressable onPress={handleUndo} style={styles.undoButton}>
+              <IconSymbol name="arrow.uturn.backward" size={24} color={theme.colors.primary} />
+            </Pressable>
+          </View>
+        )}
 
-      {mode === 'draw' && (
-        <View style={[styles.toolbar, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.brushContainer}>
-            {(Object.keys(BRUSH_COLORS) as BrushType[]).map((brush) => (
-              <Pressable
-                key={brush}
-                style={[
-                  styles.brushButton,
-                  { 
-                    backgroundColor: BRUSH_COLORS[brush],
-                    borderWidth: selectedBrush === brush ? 3 : 0,
-                    borderColor: theme.colors.primary,
-                  },
-                ]}
-                onPress={() => {
-                  setSelectedBrush(brush);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-              >
-                <Text style={[styles.brushLabel, { fontSize: baseFontSize - 4 }]}>
-                  {brush.charAt(0).toUpperCase() + brush.slice(1)}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <Pressable onPress={handleUndo} style={styles.undoButton}>
-            <IconSymbol name="arrow.uturn.backward" size={24} color={theme.colors.primary} />
-          </Pressable>
-        </View>
-      )}
+        {mode === 'marker' && (
+          <View style={[styles.toolbar, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.markerContainer}>
+              {(Object.keys(BRUSH_COLORS).length > 0 ? [
+                'house', 'castle', 'town', 'windmill', 'smith', 'wooden-bridge',
+                'stone-bridge', 'mountain', 'small-mountain', 'lake', 'river',
+                'mountain-range', 'crevice', 'forest', 'tree', 'rock', 'road', 'tower'
+              ] as MarkerType[] : []).map((marker) => (
+                <Pressable
+                  key={marker}
+                  style={[
+                    styles.markerButton,
+                    { 
+                      backgroundColor: theme.colors.background,
+                      borderWidth: selectedMarker === marker ? 3 : 1,
+                      borderColor: selectedMarker === marker ? theme.colors.primary : theme.colors.border,
+                    },
+                  ]}
+                  onPress={() => {
+                    setSelectedMarker(marker);
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  }}
+                >
+                  <View style={styles.markerIconPreview}>
+                    <Svg width={56} height={56} viewBox="-28 -28 56 56">
+                      <MarkerIcon type={marker} x={0} y={0} />
+                    </Svg>
+                  </View>
+                  <Text style={[styles.markerLabel, { color: theme.colors.text, fontSize: baseFontSize - 4 }]}>
+                    {marker.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
+                  </Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+            <Pressable onPress={handleUndo} style={styles.undoButton}>
+              <IconSymbol name="arrow.uturn.backward" size={24} color={theme.colors.primary} />
+            </Pressable>
+          </View>
+        )}
 
-      {mode === 'marker' && (
-        <View style={[styles.toolbar, { backgroundColor: theme.colors.card, borderTopColor: theme.colors.border }]}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.markerContainer}>
-            {(Object.keys(BRUSH_COLORS).length > 0 ? [
-              'house', 'castle', 'town', 'windmill', 'smith', 'wooden-bridge',
-              'stone-bridge', 'mountain', 'small-mountain', 'lake', 'river',
-              'mountain-range', 'crevice', 'forest', 'tree', 'rock', 'road', 'tower'
-            ] as MarkerType[] : []).map((marker) => (
-              <Pressable
-                key={marker}
-                style={[
-                  styles.markerButton,
-                  { 
-                    backgroundColor: theme.colors.background,
-                    borderWidth: selectedMarker === marker ? 3 : 1,
-                    borderColor: selectedMarker === marker ? theme.colors.primary : theme.colors.border,
-                  },
-                ]}
-                onPress={() => {
-                  setSelectedMarker(marker);
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                }}
-              >
-                <View style={styles.markerIconPreview}>
-                  <Svg width={56} height={56} viewBox="-28 -28 56 56">
-                    <MarkerIcon type={marker} x={0} y={0} />
-                  </Svg>
-                </View>
-                <Text style={[styles.markerLabel, { color: theme.colors.text, fontSize: baseFontSize - 4 }]}>
-                  {marker.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
-          <Pressable onPress={handleUndo} style={styles.undoButton}>
-            <IconSymbol name="arrow.uturn.backward" size={24} color={theme.colors.primary} />
-          </Pressable>
-        </View>
-      )}
-
-      <Modal
-        visible={showNameModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowNameModal(false)}
-      >
-        <Pressable 
-          style={styles.modalOverlay}
-          onPress={() => setShowNameModal(false)}
+        <Modal
+          visible={showNameModal}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowNameModal(false)}
         >
           <Pressable 
-            style={[styles.modalContent, { backgroundColor: theme.colors.card }]}
-            onPress={(e) => e.stopPropagation()}
+            style={styles.modalOverlay}
+            onPress={() => setShowNameModal(false)}
           >
-            <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
-              Edit Location
-            </Text>
-            <Text style={[styles.modalSubtitle, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize - 2 }]}>
-              Add a name to this marker or delete it. Long press the name on the map to move or resize it.
-            </Text>
-            <TextInput
-              style={[styles.modalInput, { 
-                color: theme.colors.text, 
-                borderColor: theme.colors.border,
-                fontSize: baseFontSize,
-              }]}
-              placeholder="Enter location name..."
-              placeholderTextColor={theme.dark ? '#666' : '#999'}
-              value={markerName}
-              onChangeText={setMarkerName}
-              autoFocus
-            />
-            {selectedMarkerId && markers.find(m => m.id === selectedMarkerId)?.name && (
-              <View style={styles.nameSizeControls}>
-                <Text style={[styles.nameSizeLabel, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
-                  Name Size:
-                </Text>
-                <View style={styles.nameSizeButtons}>
-                  <Pressable
-                    onPress={() => handleNameSizeChange(selectedMarkerId, -2)}
-                    style={[styles.nameSizeButton, { backgroundColor: theme.colors.border }]}
-                  >
-                    <IconSymbol name="textformat.size.smaller" size={18} color={theme.colors.text} />
-                  </Pressable>
-                  <Pressable
-                    onPress={() => handleNameSizeChange(selectedMarkerId, 2)}
-                    style={[styles.nameSizeButton, { backgroundColor: theme.colors.border }]}
-                  >
-                    <IconSymbol name="textformat.size.larger" size={18} color={theme.colors.text} />
-                  </Pressable>
+            <Pressable 
+              style={[styles.modalContent, { backgroundColor: theme.colors.card }]}
+              onPress={(e) => e.stopPropagation()}
+            >
+              <Text style={[styles.modalTitle, { color: theme.colors.text, fontSize: baseFontSize + 2 }]}>
+                Edit Location
+              </Text>
+              <Text style={[styles.modalSubtitle, { color: theme.dark ? '#999' : '#666', fontSize: baseFontSize - 2 }]}>
+                Add a name to this marker or delete it. Long press the name on the map to move or resize it.
+              </Text>
+              <TextInput
+                style={[styles.modalInput, { 
+                  color: theme.colors.text, 
+                  borderColor: theme.colors.border,
+                  fontSize: baseFontSize,
+                }]}
+                placeholder="Enter location name..."
+                placeholderTextColor={theme.dark ? '#666' : '#999'}
+                value={markerName}
+                onChangeText={setMarkerName}
+                autoFocus
+              />
+              {selectedMarkerId && markers.find(m => m.id === selectedMarkerId)?.name && (
+                <View style={styles.nameSizeControls}>
+                  <Text style={[styles.nameSizeLabel, { color: theme.colors.text, fontSize: baseFontSize - 2 }]}>
+                    Name Size:
+                  </Text>
+                  <View style={styles.nameSizeButtons}>
+                    <Pressable
+                      onPress={() => handleNameSizeChange(selectedMarkerId, -2)}
+                      style={[styles.nameSizeButton, { backgroundColor: theme.colors.border }]}
+                    >
+                      <IconSymbol name="textformat.size.smaller" size={18} color={theme.colors.text} />
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleNameSizeChange(selectedMarkerId, 2)}
+                      style={[styles.nameSizeButton, { backgroundColor: theme.colors.border }]}
+                    >
+                      <IconSymbol name="textformat.size.larger" size={18} color={theme.colors.text} />
+                    </Pressable>
+                  </View>
                 </View>
+              )}
+              <View style={styles.modalButtons}>
+                <Pressable
+                  style={[styles.modalButton, styles.deleteButton, { backgroundColor: '#FF3B30' }]}
+                  onPress={handleDeleteMarker}
+                >
+                  <IconSymbol name="trash" size={18} color="#fff" />
+                  <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Delete</Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={handleSaveMarkerName}
+                >
+                  <IconSymbol name="checkmark" size={18} color="#fff" />
+                  <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Save</Text>
+                </Pressable>
               </View>
-            )}
-            <View style={styles.modalButtons}>
-              <Pressable
-                style={[styles.modalButton, styles.deleteButton, { backgroundColor: '#FF3B30' }]}
-                onPress={handleDeleteMarker}
-              >
-                <IconSymbol name="trash" size={18} color="#fff" />
-                <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Delete</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.modalButton, styles.saveButton, { backgroundColor: theme.colors.primary }]}
-                onPress={handleSaveMarkerName}
-              >
-                <IconSymbol name="checkmark" size={18} color="#fff" />
-                <Text style={[styles.modalButtonText, { fontSize: baseFontSize }]}>Save</Text>
-              </Pressable>
-            </View>
+            </Pressable>
           </Pressable>
-        </Pressable>
-      </Modal>
-    </View>
+        </Modal>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -1107,6 +1195,25 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 5,
+  },
+  zoomControls: {
+    position: 'absolute',
+    right: 30,
+    top: '50%',
+    marginTop: -60,
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  zoomButton: {
+    width: 48,
+    height: 48,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   toolbar: {
     flexDirection: 'row',

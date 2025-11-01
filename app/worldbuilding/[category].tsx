@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -43,12 +43,20 @@ export default function WorldbuildingScreen() {
 
   const [showMapNameInput, setShowMapNameInput] = useState(false);
   const [newMapName, setNewMapName] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   const baseFontSize = getFontSizeValue();
 
   const categoryKey = category as keyof WorldbuildingWithMaps;
-  const categoryData = currentProject?.worldbuilding[categoryKey];
+  const categoryData = currentProject?.worldbuilding?.[categoryKey];
   const categoryInfo = WORLDBUILDING_CATEGORIES[categoryKey];
+
+  // Set loading to false once we have the data
+  useEffect(() => {
+    if (currentProject && categoryData !== undefined) {
+      setIsLoading(false);
+    }
+  }, [currentProject, categoryData]);
 
   const handleAddNote = () => {
     const noteId = addWorldbuildingNote(categoryKey);
@@ -124,10 +132,44 @@ export default function WorldbuildingScreen() {
     );
   };
 
+  if (isLoading) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
+          </Pressable>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 4 }]}>
+            {categoryInfo?.title || 'Loading...'}
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: theme.colors.text, fontSize: baseFontSize }]}>
+            Loading...
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   if (!currentProject || !categoryData) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Text style={{ color: theme.colors.text }}>Loading...</Text>
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <Pressable onPress={() => router.back()} style={styles.backButton}>
+            <IconSymbol name="chevron.left" size={24} color={theme.colors.primary} />
+          </Pressable>
+          <Text style={[styles.title, { color: theme.colors.text, fontSize: baseFontSize + 4 }]}>
+            Error
+          </Text>
+          <View style={{ width: 40 }} />
+        </View>
+        <View style={styles.loadingContainer}>
+          <Text style={[styles.loadingText, { color: theme.colors.text, fontSize: baseFontSize }]}>
+            No project selected. Please go back and select a project.
+          </Text>
+        </View>
       </View>
     );
   }
@@ -320,6 +362,15 @@ const styles = StyleSheet.create({
   },
   title: {
     fontWeight: 'bold',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  loadingText: {
+    textAlign: 'center',
   },
   content: {
     flex: 1,
